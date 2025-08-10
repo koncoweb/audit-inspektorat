@@ -105,10 +105,24 @@ export const cloudinaryService = {
       const auditRef = doc(db, 'audits', auditId);
       const auditDoc = await getDoc(auditRef);
       if (auditDoc.exists()) {
+        const auditData = auditDoc.data();
+        const currentWorkPapers = auditData.workPapers || [];
+        
+        // Add file reference to audit document
+        const fileReference = {
+          id: docRef.id,
+          fileName: file.name,
+          fileUrl: result.secure_url,
+          cloudinaryId: result.public_id,
+          uploadedAt: new Date(),
+          uploadedBy: workPaperData.uploadedBy || 'current-user'
+        };
+        
         await updateDoc(auditRef, {
-          workPapersCount: (auditDoc.data().workPapersCount || 0) + 1,
-          lastUpdated: serverTimestamp(),
-          hasWorkPapers: true
+          workPapers: [...currentWorkPapers, fileReference],
+          workPapersCount: (auditData.workPapersCount || 0) + 1,
+          hasWorkPapers: true,
+          lastUpdated: serverTimestamp()
         });
       }
       
@@ -199,14 +213,28 @@ export const cloudinaryService = {
         lastAccessed: serverTimestamp()
       });
       
-      // Update audit document
+      // Update audit document dengan referensi file
       const auditRef = doc(db, 'audits', auditId);
       const auditDoc = await getDoc(auditRef);
       if (auditDoc.exists()) {
+        const auditData = auditDoc.data();
+        const currentEvidence = auditData.evidence || [];
+        
+        // Add file reference to audit document
+        const fileReference = {
+          id: docRef.id,
+          fileName: file.name,
+          fileUrl: result.secure_url,
+          cloudinaryId: result.public_id,
+          uploadedAt: new Date(),
+          uploadedBy: evidenceData.uploadedBy || 'current-user'
+        };
+        
         await updateDoc(auditRef, {
-          evidenceCount: (auditDoc.data().evidenceCount || 0) + 1,
-          lastUpdated: serverTimestamp(),
-          hasEvidence: true
+          evidence: [...currentEvidence, fileReference],
+          evidenceCount: (auditData.evidenceCount || 0) + 1,
+          hasEvidence: true,
+          lastUpdated: serverTimestamp()
         });
       }
       
@@ -270,6 +298,31 @@ export const cloudinaryService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      
+      // Update audit document dengan referensi file
+      const auditRef = doc(db, 'audits', auditId);
+      const auditDoc = await getDoc(auditRef);
+      if (auditDoc.exists()) {
+        const auditData = auditDoc.data();
+        const currentInterviews = auditData.interviews || [];
+        
+        // Add file reference to audit document
+        const fileReference = {
+          id: docRef.id,
+          fileName: file.name,
+          fileUrl: result.secure_url,
+          cloudinaryId: result.public_id,
+          uploadedAt: new Date(),
+          uploadedBy: interviewData.uploadedBy || 'current-user'
+        };
+        
+        await updateDoc(auditRef, {
+          interviews: [...currentInterviews, fileReference],
+          interviewsCount: (auditData.interviewsCount || 0) + 1,
+          hasInterviews: true,
+          lastUpdated: serverTimestamp()
+        });
+      }
       
       // Track file upload
       await addDoc(collection(db, 'file-uploads'), {
@@ -353,6 +406,31 @@ export const cloudinaryService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      
+      // Update audit document dengan referensi file
+      const auditRef = doc(db, 'audits', auditId);
+      const auditDoc = await getDoc(auditRef);
+      if (auditDoc.exists()) {
+        const auditData = auditDoc.data();
+        const currentNotes = auditData.notes || [];
+        
+        // Add file reference to audit document
+        const fileReference = {
+          id: docRef.id,
+          fileName: file.name,
+          fileUrl: result.secure_url,
+          cloudinaryId: result.public_id,
+          uploadedAt: new Date(),
+          uploadedBy: noteData.uploadedBy || 'current-user'
+        };
+        
+        await updateDoc(auditRef, {
+          notes: [...currentNotes, fileReference],
+          notesCount: (auditData.notesCount || 0) + 1,
+          hasNotes: true,
+          lastUpdated: serverTimestamp()
+        });
+      }
       
       // Track file upload
       await addDoc(collection(db, 'file-uploads'), {
@@ -533,7 +611,7 @@ export const cloudinaryService = {
         isDeleted: true
       });
       
-      // Update audit document counts
+      // Update audit document counts dan hapus referensi file
       const auditRef = doc(db, 'audits', auditId);
       const auditDoc = await getDoc(auditRef);
       if (auditDoc.exists()) {
@@ -542,10 +620,28 @@ export const cloudinaryService = {
         
         switch (fileType) {
           case 'workPaper':
+            const updatedWorkPapers = (auditData.workPapers || []).filter(wp => wp.id !== fileId);
+            updateData.workPapers = updatedWorkPapers;
             updateData.workPapersCount = Math.max(0, (auditData.workPapersCount || 0) - 1);
+            updateData.hasWorkPapers = updatedWorkPapers.length > 0;
             break;
           case 'evidence':
+            const updatedEvidence = (auditData.evidence || []).filter(ev => ev.id !== fileId);
+            updateData.evidence = updatedEvidence;
             updateData.evidenceCount = Math.max(0, (auditData.evidenceCount || 0) - 1);
+            updateData.hasEvidence = updatedEvidence.length > 0;
+            break;
+          case 'interview':
+            const updatedInterviews = (auditData.interviews || []).filter(int => int.id !== fileId);
+            updateData.interviews = updatedInterviews;
+            updateData.interviewsCount = Math.max(0, (auditData.interviewsCount || 0) - 1);
+            updateData.hasInterviews = updatedInterviews.length > 0;
+            break;
+          case 'note':
+            const updatedNotes = (auditData.notes || []).filter(note => note.id !== fileId);
+            updateData.notes = updatedNotes;
+            updateData.notesCount = Math.max(0, (auditData.notesCount || 0) - 1);
+            updateData.hasNotes = updatedNotes.length > 0;
             break;
         }
         

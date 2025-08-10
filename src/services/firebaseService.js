@@ -216,6 +216,21 @@ export const auditService = {
     console.log('Creating audit with data:', auditData);
     const docData = {
       ...auditData,
+      // File references fields
+      workPapers: [],
+      evidence: [],
+      interviews: [],
+      notes: [],
+      // File counts
+      workPapersCount: 0,
+      evidenceCount: 0,
+      interviewsCount: 0,
+      notesCount: 0,
+      // File status flags
+      hasWorkPapers: false,
+      hasEvidence: false,
+      hasInterviews: false,
+      hasNotes: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };

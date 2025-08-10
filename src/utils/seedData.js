@@ -21,6 +21,28 @@ const COLLECTIONS = {
   REPORTS: 'reports'
 };
 
+// Helper function to add file reference fields to existing audits
+const addFileReferenceFields = (audit) => {
+  return {
+    ...audit,
+    // File references fields
+    workPapers: audit.workPapers || [],
+    evidence: audit.evidence || [],
+    interviews: audit.interviews || [],
+    notes: audit.notes || [],
+    // File counts
+    workPapersCount: audit.workPapersCount || 0,
+    evidenceCount: audit.evidenceCount || 0,
+    interviewsCount: audit.interviewsCount || 0,
+    notesCount: audit.notesCount || 0,
+    // File status flags
+    hasWorkPapers: audit.hasWorkPapers || false,
+    hasEvidence: audit.hasEvidence || false,
+    hasInterviews: audit.hasInterviews || false,
+    hasNotes: audit.hasNotes || false
+  };
+};
+
 // Sample data untuk seeding database
 const sampleUsers = [
   {
@@ -75,6 +97,21 @@ const sampleAudits = [
     riskLevel: 'Medium',
     budget: 50000000,
     progress: 75,
+    // File references fields
+    workPapers: [],
+    evidence: [],
+    interviews: [],
+    notes: [],
+    // File counts
+    workPapersCount: 0,
+    evidenceCount: 0,
+    interviewsCount: 0,
+    notesCount: 0,
+    // File status flags
+    hasWorkPapers: false,
+    hasEvidence: false,
+    hasInterviews: false,
+    hasNotes: false,
     team: [
       {
         id: '1',
@@ -603,8 +640,9 @@ export const seedAudits = async () => {
     const exists = await checkIfDataExists('audits', 'title', audit.title);
     if (!exists) {
       try {
+        const auditWithFileFields = addFileReferenceFields(audit);
         await addDoc(collection(db, 'audits'), {
-          ...audit,
+          ...auditWithFileFields,
           createdAt: new Date(),
           updatedAt: new Date()
         });
@@ -749,8 +787,9 @@ export const seedExtendedAudits = async () => {
     const auditsRef = collection(db, COLLECTIONS.AUDITS);
     
     for (const audit of sampleAuditsExtended) {
+      const auditWithFileFields = addFileReferenceFields(audit);
       await addDoc(auditsRef, {
-        ...audit,
+        ...auditWithFileFields,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
