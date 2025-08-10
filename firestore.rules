@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Audits collection (unified)
+    match /audits/{auditId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Work Papers subcollection
+    match /audits/{auditId}/workPapers/{workPaperId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Evidence subcollection
+    match /audits/{auditId}/evidence/{evidenceId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Interviews subcollection
+    match /audits/{auditId}/interviews/{interviewId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Findings subcollection
+    match /audits/{auditId}/findings/{findingId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Notes subcollection
+    match /audits/{auditId}/notes/{noteId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // File uploads tracking collection
+    match /file-uploads/{uploadId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Legacy collections (for backward compatibility)
+    match /audit_plans/{planId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /work_papers/{paperId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /audit_evidence/{evidenceId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /audit_notes/{noteId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

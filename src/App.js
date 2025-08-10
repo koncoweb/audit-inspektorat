@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase/config';
+import { userService } from './services/firebaseService';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
@@ -9,15 +10,26 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Admin from './pages/Admin';
 import PerencanaanAudit from './pages/PerencanaanAudit';
+import PelaksanaanAudit from './pages/PelaksanaanAudit';
 import './styles/global.css';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          // Ensure user exists in Firestore
+          const userData = await userService.ensureUserExists(user);
+          setUserProfile(userData);
+        } catch (error) {
+          console.error('Error ensuring user exists:', error);
+        }
+      }
       setUser(user);
       setLoading(false);
     });
@@ -28,6 +40,7 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      setUserProfile(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -101,8 +114,8 @@ function App() {
           title={pageInfo.title}
           subtitle={pageInfo.subtitle}
           user={{
-            name: user.displayName || user.email?.split('@')[0] || 'Dr. Ahmad Rahman',
-            role: 'Administrator'
+            name: userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User',
+            role: userProfile?.role || 'Auditor'
           }}
           onLogout={handleLogout}
         />
@@ -110,7 +123,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/perencanaan" element={<PerencanaanAudit />} />
-          <Route path="/pelaksanaan" element={<div>Pelaksanaan Audit Page</div>} />
+          <Route path="/pelaksanaan" element={<PelaksanaanAudit />} />
           <Route path="/temuan" element={<div>Temuan Audit Page</div>} />
           <Route path="/laporan" element={<div>Laporan Page</div>} />
           <Route path="/dokumen" element={<div>Dokumen Page</div>} />

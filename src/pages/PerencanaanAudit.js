@@ -1,142 +1,628 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FiCalendar, 
-  FiList, 
-  FiPlus, 
-  FiChevronLeft, 
-  FiChevronRight,
-  FiFileText,
+  FiSearch, 
+  FiFilter,
+  FiPlus,
+  FiEye,
+  FiEdit,
+  FiTrash2,
   FiCheckCircle,
   FiClock,
-  FiAlertTriangle
+  FiAlertTriangle,
+  FiX,
+  FiSave,
+  FiFileText,
+  FiUsers,
+  FiDollarSign,
+  FiTarget,
+  FiMapPin,
+  FiCalendar as FiCalendarIcon
 } from 'react-icons/fi';
+import { auditService } from '../services/firebaseService';
 
 const PerencanaanAudit = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
+  const [viewMode, setViewMode] = useState('table');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Semua Status');
+  const [priorityFilter, setPriorityFilter] = useState('Semua Prioritas');
+  const [showModal, setShowModal] = useState(false);
+  const [auditPlans, setAuditPlans] = useState([]);
+  const [summaryStats, setSummaryStats] = useState({
+    total: 0,
+    draft: 0,
+    approved: 0,
+    ongoing: 0,
+    completed: 0,
+    highPriority: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Sample audit plans data
-  const auditPlans = [
-    {
-      id: 1,
-      title: 'Audit Keuangan Dinas Pendidikan',
-      status: 'draft',
-      priority: 'high',
-      startDate: new Date(2025, 7, 15),
-      endDate: new Date(2025, 7, 30),
-      auditor: 'Dr. Ahmad Rahman'
-    },
-    {
-      id: 2,
-      title: 'Audit Kinerja Dinas Kesehatan',
-      status: 'approved',
-      priority: 'high',
-      startDate: new Date(2025, 7, 10),
-      endDate: new Date(2025, 7, 25),
-      auditor: 'Siti Nurhaliza'
-    },
-    {
-      id: 3,
-      title: 'Audit Kepatuhan Dinas Lingkungan',
-      status: 'ongoing',
-      priority: 'medium',
-      startDate: new Date(2025, 7, 5),
-      endDate: new Date(2025, 7, 20),
-      auditor: 'Budi Santoso'
+  // Modal states
+  const [modalMode, setModalMode] = useState('create'); // 'create', 'view', 'edit'
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    department: '',
+    type: '',
+    priority: 'Sedang',
+    status: 'Draft',
+    auditor: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+    scope: '',
+    objectives: '',
+    budget: '',
+    riskLevel: 'Medium'
+  });
+
+  // Load audit plans from Firestore
+  useEffect(() => {
+    loadAuditPlans();
+  }, []);
+
+  const loadAuditPlans = async () => {
+    try {
+      setLoading(true);
+      // Load only draft audit plans
+      // After approval, audits will appear in the Pelaksanaan Audit page
+      const plans = await auditService.getPlanningAudits();
+      setAuditPlans(plans);
+      
+      // Calculate summary stats
+      const stats = await auditService.getPlanningStats();
+      setSummaryStats(stats);
+    } catch (error) {
+      console.error('Error loading audit plans:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  // Summary statistics
-  const summaryStats = {
-    total: auditPlans.length,
-    draft: auditPlans.filter(plan => plan.status === 'draft').length,
-    approved: auditPlans.filter(plan => plan.status === 'approved').length,
-    ongoing: auditPlans.filter(plan => plan.status === 'ongoing').length,
-    completed: auditPlans.filter(plan => plan.status === 'completed').length,
-    highPriority: auditPlans.filter(plan => plan.priority === 'high').length
   };
 
-  // Calendar functions
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDay = firstDay.getDay();
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const formatDateForDisplay = (startDate, endDate) => {
+    if (!startDate || !endDate) return '';
     
-    return { daysInMonth, startingDay };
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    };
+    
+    return `${formatDate(startDate)} s/d ${formatDate(endDate)}`;
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', { 
-      year: 'numeric', 
-      month: 'long' 
+  const parsePeriodString = (periodString) => {
+    if (!periodString) return { startDate: '', endDate: '' };
+    
+    const parts = periodString.split(' s/d ');
+    if (parts.length === 2) {
+      const startDate = new Date(parts[0].split('/').reverse().join('-'));
+      const endDate = new Date(parts[1].split('/').reverse().join('-'));
+      
+      return {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      };
+    }
+    
+    return { startDate: '', endDate: '' };
+  };
+
+  const openCreateModal = () => {
+    setModalMode('create');
+    setFormData({
+      title: '',
+      department: '',
+      type: '',
+      priority: 'Sedang',
+      status: 'Draft',
+      auditor: '',
+      startDate: '',
+      endDate: '',
+      description: '',
+      scope: '',
+      objectives: '',
+      budget: '',
+      riskLevel: 'Medium'
+    });
+    setShowModal(true);
+  };
+
+  const openViewModal = (plan) => {
+    setModalMode('view');
+    setSelectedPlan(plan);
+    
+    // Parse period string to get start and end dates
+    const { startDate, endDate } = parsePeriodString(plan.period);
+    
+    setFormData({
+      title: plan.title,
+      department: plan.department,
+      type: plan.type,
+      priority: plan.priority,
+      status: plan.status,
+      auditor: plan.auditor,
+      startDate: startDate,
+      endDate: endDate,
+      description: plan.description,
+      scope: plan.scope,
+      objectives: plan.objectives,
+      budget: plan.budget,
+      riskLevel: plan.riskLevel
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (plan) => {
+    setModalMode('edit');
+    setSelectedPlan(plan);
+    
+    // Parse period string to get start and end dates
+    const { startDate, endDate } = parsePeriodString(plan.period);
+    
+    setFormData({
+      title: plan.title,
+      department: plan.department,
+      type: plan.type,
+      priority: plan.priority,
+      status: plan.status,
+      auditor: plan.auditor,
+      startDate: startDate,
+      endDate: endDate,
+      description: plan.description,
+      scope: plan.scope,
+      objectives: plan.objectives,
+      budget: plan.budget,
+      riskLevel: plan.riskLevel
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      // Format period string from start and end dates
+      const period = formatDateForDisplay(formData.startDate, formData.endDate);
+      
+      // Convert date strings to Date objects for Firestore
+      const startDate = formData.startDate ? new Date(formData.startDate) : new Date();
+      const endDate = formData.endDate ? new Date(formData.endDate) : new Date();
+      
+      if (modalMode === 'create') {
+        // Convert budget to number and add required fields
+        const planData = {
+          ...formData,
+          period: period,
+          budget: parseFloat(formData.budget) || 0,
+          startDate: startDate,
+          endDate: endDate,
+          progress: 0, // Default progress for new plans
+          team: [], // Default empty team
+          workPapers: [], // Default empty work papers
+          evidence: [], // Default empty evidence
+          notes: [] // Default empty notes
+        };
+
+        console.log('Sending audit data to Firestore:', planData);
+        await auditService.createAudit(planData);
+        alert('Rencana audit berhasil dibuat!');
+      } else if (modalMode === 'edit') {
+        // Convert budget to number and update dates
+        const planData = {
+          ...formData,
+          period: period,
+          budget: parseFloat(formData.budget) || 0,
+          startDate: startDate,
+          endDate: endDate
+        };
+
+        await auditService.updateAudit(selectedPlan.id, planData);
+        alert('Rencana audit berhasil diperbarui!');
+      }
+      
+      // Reset form and close modal
+      setFormData({
+        title: '',
+        department: '',
+        type: '',
+        priority: 'Sedang',
+        status: 'Draft',
+        auditor: '',
+        startDate: '',
+        endDate: '',
+        description: '',
+        scope: '',
+        objectives: '',
+        budget: '',
+        riskLevel: 'Medium'
+      });
+      setShowModal(false);
+      setSelectedPlan(null);
+      
+      // Reload audit plans
+      await loadAuditPlans();
+    } catch (error) {
+      console.error('Error saving audit plan:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      alert(`Gagal menyimpan rencana audit: ${error.message}. Silakan coba lagi.`);
+    }
+  };
+
+  const handleDelete = async (planId) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus rencana audit ini?')) {
+      try {
+        await auditService.deleteAudit(planId);
+        await loadAuditPlans();
+        alert('Rencana audit berhasil dihapus!');
+      } catch (error) {
+        console.error('Error deleting audit plan:', error);
+        alert('Gagal menghapus rencana audit. Silakan coba lagi.');
+      }
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedPlan(null);
+    setFormData({
+      title: '',
+      department: '',
+      type: '',
+      priority: 'Sedang',
+      status: 'Draft',
+      auditor: '',
+      startDate: '',
+      endDate: '',
+      description: '',
+      scope: '',
+      objectives: '',
+      budget: '',
+      riskLevel: 'Medium'
     });
   };
 
-  const isToday = (day) => {
-    const today = new Date();
-    return day === today.getDate() && 
-           currentDate.getMonth() === today.getMonth() && 
-           currentDate.getFullYear() === today.getFullYear();
-  };
-
-  const getPlansForDate = (day) => {
-    return auditPlans.filter(plan => {
-      const planStart = plan.startDate.getDate();
-      const planEnd = plan.endDate.getDate();
-      return day >= planStart && day <= planEnd;
-    });
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'Tinggi': return '#ef4444';
+      case 'Sedang': return '#f59e0b';
+      case 'Rendah': return '#10b981';
+      default: return '#6b7280';
+    }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'draft': return '#e2e8f0';
-      case 'approved': return '#dbeafe';
-      case 'ongoing': return '#fef3c7';
-      case 'completed': return '#d1fae5';
-      default: return '#e2e8f0';
+      case 'Draft': return '#6b7280';
+      case 'Disetujui': return '#10b981';
+      case 'Berlangsung': return '#3b82f6';
+      case 'Selesai': return '#8b5cf6';
+      default: return '#6b7280';
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusIcon = (status) => {
     switch (status) {
-      case 'draft': return 'Draft';
-      case 'approved': return 'Disetujui';
-      case 'ongoing': return 'Berlangsung';
-      case 'completed': return 'Selesai';
-      default: return 'Draft';
+      case 'Draft': return <FiFileText size={16} />;
+      case 'Disetujui': return <FiCheckCircle size={16} />;
+      case 'Berlangsung': return <FiClock size={16} />;
+      case 'Selesai': return <FiCheckCircle size={16} />;
+      default: return <FiFileText size={16} />;
     }
   };
 
-  const navigateMonth = (direction) => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev);
-      if (direction === 'prev') {
-        newDate.setMonth(newDate.getMonth() - 1);
-      } else {
-        newDate.setMonth(newDate.getMonth() + 1);
-      }
-      return newDate;
-    });
+  // Filter plans based on search and filters
+  // Note: All audit plans remain in this page regardless of status
+  // (Draft, Disetujui, Berlangsung, Selesai) - they don't move to other pages
+  const filteredPlans = auditPlans.filter(plan => {
+    const matchesSearch = plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plan.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plan.auditor.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'Semua Status' || plan.status === statusFilter;
+    const matchesPriority = priorityFilter === 'Semua Prioritas' || plan.priority === priorityFilter;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+  const renderModalContent = () => {
+    const isViewMode = modalMode === 'view';
+    const isEditMode = modalMode === 'edit';
+    const isCreateMode = modalMode === 'create';
+
+    return (
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2>
+            {isCreateMode && 'Buat Rencana Audit Baru'}
+            {isViewMode && 'Detail Rencana Audit'}
+            {isEditMode && 'Edit Rencana Audit'}
+          </h2>
+          <button 
+            className="modal-close"
+            onClick={closeModal}
+          >
+            <FiX />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="audit-plan-form">
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="title">Judul Rencana Audit *</label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+                placeholder="Masukkan judul rencana audit"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="department">Departemen/Unit *</label>
+              <input
+                type="text"
+                id="department"
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+                placeholder="Contoh: Dinas Pendidikan"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="type">Jenis Audit *</label>
+              <select
+                id="type"
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+              >
+                <option value="">Pilih jenis audit</option>
+                <option value="Audit Keuangan">Audit Keuangan</option>
+                <option value="Audit Kinerja">Audit Kinerja</option>
+                <option value="Audit Kepatuhan">Audit Kepatuhan</option>
+                <option value="Audit Operasional">Audit Operasional</option>
+                <option value="Audit Sistem">Audit Sistem</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="priority">Prioritas *</label>
+              <select
+                id="priority"
+                name="priority"
+                value={formData.priority}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+              >
+                <option value="Tinggi">Tinggi</option>
+                <option value="Sedang">Sedang</option>
+                <option value="Rendah">Rendah</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="status">Status *</label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+              >
+                <option value="Draft">Draft</option>
+                <option value="Disetujui">Disetujui</option>
+                <option value="Berlangsung">Berlangsung</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="auditor">Auditor</label>
+              <input
+                type="text"
+                id="auditor"
+                name="auditor"
+                value={formData.auditor}
+                onChange={handleInputChange}
+                disabled={isViewMode}
+                placeholder="Nama auditor yang bertanggung jawab"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="startDate">
+                <FiCalendarIcon />
+                Tanggal Mulai *
+              </label>
+              <input
+                type="date"
+                id="startDate"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="endDate">
+                <FiCalendarIcon />
+                Tanggal Selesai *
+              </label>
+              <input
+                type="date"
+                id="endDate"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+                min={formData.startDate || new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="budget">Anggaran (Rp) *</label>
+              <input
+                type="number"
+                id="budget"
+                name="budget"
+                value={formData.budget}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+                placeholder="0"
+                min="0"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="riskLevel">Tingkat Risiko *</label>
+              <select
+                id="riskLevel"
+                name="riskLevel"
+                value={formData.riskLevel}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+              >
+                <option value="Low">Rendah</option>
+                <option value="Medium">Sedang</option>
+                <option value="High">Tinggi</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">Deskripsi *</label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              required
+              disabled={isViewMode}
+              rows="3"
+              placeholder="Deskripsi singkat tentang rencana audit"
+            />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="scope">Ruang Lingkup *</label>
+              <textarea
+                id="scope"
+                name="scope"
+                value={formData.scope}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+                rows="3"
+                placeholder="Ruang lingkup audit yang akan dilakukan"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="objectives">Tujuan Audit *</label>
+              <textarea
+                id="objectives"
+                name="objectives"
+                value={formData.objectives}
+                onChange={handleInputChange}
+                required
+                disabled={isViewMode}
+                rows="3"
+                placeholder="Tujuan dan sasaran audit"
+              />
+            </div>
+          </div>
+
+          {!isViewMode && (
+            <div className="form-actions">
+              <button 
+                type="button" 
+                className="btn-secondary"
+                onClick={closeModal}
+              >
+                Batal
+              </button>
+              <button type="submit" className="btn-primary">
+                <FiSave />
+                {isCreateMode ? 'Simpan Rencana' : 'Update Rencana'}
+              </button>
+            </div>
+          )}
+
+          {isViewMode && (
+            <div className="form-actions">
+              <button 
+                type="button" 
+                className="btn-secondary"
+                onClick={closeModal}
+              >
+                Tutup
+              </button>
+              <button 
+                type="button" 
+                className="btn-primary"
+                onClick={() => {
+                  setModalMode('edit');
+                }}
+              >
+                <FiEdit />
+                Edit Rencana
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
+    );
   };
 
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
-  const { daysInMonth, startingDay } = getDaysInMonth(currentDate);
-  const days = [];
-  
-  // Add empty cells for days before the first day of the month
-  for (let i = 0; i < startingDay; i++) {
-    days.push(null);
-  }
-  
-  // Add days of the month
-  for (let day = 1; day <= daysInMonth; day++) {
-    days.push(day);
+  if (loading) {
+    return (
+      <div className="perencanaan-content">
+        <div className="loading-message">Memuat data rencana audit...</div>
+      </div>
+    );
   }
 
   return (
@@ -145,199 +631,199 @@ const PerencanaanAudit = () => {
       <div className="page-header">
         <div className="page-title">
           <h1>Perencanaan Audit</h1>
-          <p>Kelola dan rencanakan kegiatan audit internal</p>
-        </div>
-        
-        <div className="view-controls">
-          <div className="view-toggles">
-            <button 
-              className={`view-toggle ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-            >
-              <FiList />
-              <span>List</span>
-            </button>
-            <button 
-              className={`view-toggle ${viewMode === 'calendar' ? 'active' : ''}`}
-              onClick={() => setViewMode('calendar')}
-            >
-              <FiCalendar />
-              <span>Kalender</span>
-            </button>
-          </div>
-          <button className="add-plan-btn">
-            <FiPlus />
-            <span>+ Tambah Rencana</span>
-          </button>
+          <p>Manajemen dan perencanaan audit internal</p>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="summary-cards">
         <div className="summary-card">
-          <div className="card-header">
-            <span className="card-title">Total Rencana</span>
-            <div className="card-icon blue">
-              <FiCalendar />
-            </div>
+          <div className="card-icon">
+            <FiCalendar />
           </div>
-          <div className="card-value">{summaryStats.total}</div>
+          <div className="card-content">
+            <h3>{summaryStats.total}</h3>
+            <p>Total Rencana</p>
+          </div>
         </div>
         
         <div className="summary-card">
-          <div className="card-header">
-            <span className="card-title">Draft</span>
-            <div className="card-icon gray">
-              <FiFileText />
-            </div>
+          <div className="card-icon draft">
+            <FiFileText />
           </div>
-          <div className="card-value">{summaryStats.draft}</div>
+          <div className="card-content">
+            <h3>{summaryStats.draft}</h3>
+            <p>Draft</p>
+          </div>
         </div>
         
         <div className="summary-card">
-          <div className="card-header">
-            <span className="card-title">Disetujui</span>
-            <div className="card-icon blue">
-              <FiCheckCircle />
-            </div>
+          <div className="card-icon approved">
+            <FiCheckCircle />
           </div>
-          <div className="card-value">{summaryStats.approved}</div>
+          <div className="card-content">
+            <h3>{summaryStats.approved}</h3>
+            <p>Disetujui</p>
+          </div>
         </div>
         
         <div className="summary-card">
-          <div className="card-header">
-            <span className="card-title">Berlangsung</span>
-            <div className="card-icon orange">
-              <FiClock />
-            </div>
+          <div className="card-icon ongoing">
+            <FiClock />
           </div>
-          <div className="card-value orange">{summaryStats.ongoing}</div>
+          <div className="card-content">
+            <h3>{summaryStats.ongoing}</h3>
+            <p>Berlangsung</p>
+          </div>
         </div>
         
         <div className="summary-card">
-          <div className="card-header">
-            <span className="card-title">Selesai</span>
-            <div className="card-icon green">
-              <FiCheckCircle />
-            </div>
+          <div className="card-icon completed">
+            <FiCheckCircle />
           </div>
-          <div className="card-value green">{summaryStats.completed}</div>
+          <div className="card-content">
+            <h3>{summaryStats.completed}</h3>
+            <p>Selesai</p>
+          </div>
         </div>
         
         <div className="summary-card">
-          <div className="card-header">
-            <span className="card-title">Prioritas Tinggi</span>
-            <div className="card-icon red">
-              <FiAlertTriangle />
-            </div>
+          <div className="card-icon high-priority">
+            <FiAlertTriangle />
           </div>
-          <div className="card-value red">{summaryStats.highPriority}</div>
+          <div className="card-content">
+            <h3>{summaryStats.highPriority}</h3>
+            <p>Prioritas Tinggi</p>
+          </div>
         </div>
       </div>
 
-      {/* Calendar View */}
-      {viewMode === 'calendar' && (
-        <div className="calendar-section">
-          {/* Calendar Header */}
-          <div className="calendar-header">
-            <div className="month-navigation">
-              <button className="nav-btn" onClick={() => navigateMonth('prev')}>
-                <FiChevronLeft />
-              </button>
-              <h2 className="current-month">{formatDate(currentDate)}</h2>
-              <button className="nav-btn" onClick={() => navigateMonth('next')}>
-                <FiChevronRight />
-              </button>
-            </div>
-            <button className="today-btn" onClick={goToToday}>
-              Hari Ini
-            </button>
+      {/* Search and Filter Section */}
+      <div className="search-filter-section">
+        <div className="search-box">
+          <FiSearch />
+          <input
+            type="text"
+            placeholder="Cari rencana audit..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        <div className="filter-controls">
+          <div className="filter-group">
+            <FiFilter />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="Semua Status">Semua Status</option>
+              <option value="Draft">Draft</option>
+            </select>
           </div>
-
-          {/* Calendar Legend */}
-          <div className="calendar-legend">
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#e2e8f0' }}></div>
-              <span>Draft</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#dbeafe' }}></div>
-              <span>Disetujui</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#fef3c7' }}></div>
-              <span>Berlangsung</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color" style={{ backgroundColor: '#d1fae5' }}></div>
-              <span>Selesai</span>
-            </div>
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="calendar-grid">
-            {/* Day Headers */}
-            <div className="calendar-day-header">Min</div>
-            <div className="calendar-day-header">Sen</div>
-            <div className="calendar-day-header">Sel</div>
-            <div className="calendar-day-header">Rab</div>
-            <div className="calendar-day-header">Kam</div>
-            <div className="calendar-day-header">Jum</div>
-            <div className="calendar-day-header">Sab</div>
-
-            {/* Calendar Days */}
-            {days.map((day, index) => (
-              <div 
-                key={index} 
-                className={`calendar-day ${day ? '' : 'empty'} ${day && isToday(day) ? 'today' : ''}`}
-              >
-                {day && (
-                  <>
-                    <div className="day-number">{day}</div>
-                    <div className="day-events">
-                      {getPlansForDate(day).map(plan => (
-                        <div 
-                          key={plan.id}
-                          className="day-event"
-                          style={{ backgroundColor: getStatusColor(plan.status) }}
-                          title={`${plan.title} - ${getStatusText(plan.status)}`}
-                        >
-                          <div className="event-dot"></div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+          
+          <div className="filter-group">
+            <FiFilter />
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            >
+              <option value="Semua Prioritas">Semua Prioritas</option>
+              <option value="Tinggi">Tinggi</option>
+              <option value="Sedang">Sedang</option>
+              <option value="Rendah">Rendah</option>
+            </select>
           </div>
         </div>
-      )}
+        
+        <button className="add-plan-btn" onClick={openCreateModal}>
+          <FiPlus />
+          <span>+ Tambah Rencana</span>
+        </button>
+      </div>
 
-      {/* List View */}
-      {viewMode === 'list' && (
-        <div className="list-section">
-          <div className="list-header">
-            <h3>Daftar Rencana Audit</h3>
-          </div>
-          <div className="audit-list">
-            {auditPlans.map(plan => (
-              <div key={plan.id} className="audit-item">
-                <div className="audit-header">
-                  <div>
-                    <div className="audit-title">{plan.title}</div>
-                    <div className="audit-auditor">{plan.auditor}</div>
-                  </div>
-                  <div className={`audit-status ${plan.status}`}>
-                    {getStatusText(plan.status)}
-                  </div>
-                </div>
-                <div className="audit-dates">
-                  {plan.startDate.toLocaleDateString('id-ID')} - {plan.endDate.toLocaleDateString('id-ID')}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Audit Plans Table */}
+      <div className="audit-plans-table">
+        {loading ? (
+          <div className="loading-message">Memuat data rencana audit...</div>
+        ) : (
+          <table className="plans-table">
+            <thead>
+              <tr>
+                <th>Rencana Audit</th>
+                <th>Jenis</th>
+                <th>Prioritas</th>
+                <th>Status</th>
+                <th>Auditor</th>
+                <th>Periode</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPlans.map(plan => (
+                <tr key={plan.id}>
+                  <td>
+                    <div className="plan-info">
+                      <div className="plan-title">{plan.title}</div>
+                      <div className="plan-department">{plan.department}</div>
+                    </div>
+                  </td>
+                  <td>{plan.type}</td>
+                  <td>
+                    <span 
+                      className="priority-badge"
+                      style={{ backgroundColor: getPriorityColor(plan.priority) }}
+                    >
+                      {plan.priority}
+                    </span>
+                  </td>
+                  <td>
+                    <span 
+                      className="status-badge"
+                      style={{ backgroundColor: getStatusColor(plan.status) }}
+                    >
+                      {getStatusIcon(plan.status)}
+                      {plan.status}
+                    </span>
+                  </td>
+                  <td>{plan.auditor}</td>
+                  <td>{plan.period}</td>
+                  <td>
+                    <div className="action-buttons">
+                      <button 
+                        className="action-btn view" 
+                        title="Lihat"
+                        onClick={() => openViewModal(plan)}
+                      >
+                        <FiEye />
+                      </button>
+                      <button 
+                        className="action-btn edit" 
+                        title="Edit"
+                        onClick={() => openEditModal(plan)}
+                      >
+                        <FiEdit />
+                      </button>
+                      <button 
+                        className="action-btn delete" 
+                        title="Hapus"
+                        onClick={() => handleDelete(plan.id)}
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Modal Form for Creating/Viewing/Editing Audit Plan */}
+      {showModal && (
+        <div className="modal-overlay">
+          {renderModalContent()}
         </div>
       )}
     </div>
