@@ -37,8 +37,9 @@ const Sidebar = () => {
             <FiShield />
           </div>
           <div className="logo-text">
-            Inspektorat<br />
-            Kabupaten Morowali Utara
+            <div className="logo-main">MOROWALI UTARA</div>
+            <div className="logo-sub">Inspektorat</div>
+            <div className="logo-sub">Kabupaten Morowali Utara</div>
           </div>
         </div>
       </div>

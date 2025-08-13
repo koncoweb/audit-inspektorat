@@ -548,31 +548,43 @@ const sampleNotes = [
 
 const sampleFindings = [
   {
-    title: 'Dokumentasi tidak lengkap',
-    description: 'Beberapa dokumen pendukung tidak tersedia atau tidak lengkap',
-    severity: 'Medium',
-    category: 'Dokumentasi',
-    recommendation: 'Perbaiki sistem dokumentasi dan pastikan semua dokumen tersimpan dengan baik',
-    status: 'Open',
-    dueDate: new Date('2024-02-15')
+    title: 'Ketidaksesuaian Pencatatan Aset',
+    description: 'Ditemukan perbedaan nilai aset tetap antara catatan akuntansi dengan kondisi fisik di lapangan',
+    severity: 'Tinggi',
+    category: 'Keuangan',
+    recommendation: 'Melakukan rekonsiliasi dan penyesuaian nilai aset tetap sesuai kondisi riil',
+    status: 'Dalam Tindak Lanjut',
+    auditContext: 'Audit Keuangan Dinas Pendidikan 2024',
+    responsibleParty: 'Kepala Bagian Keuangan',
+    findingDate: '2024-01-12',
+    createdAt: new Date('2024-01-12'),
+    updatedAt: new Date('2024-01-12')
   },
   {
-    title: 'Penyimpangan prosedur pengadaan',
-    description: 'Proses pengadaan tidak mengikuti prosedur yang telah ditetapkan',
-    severity: 'High',
-    category: 'Pengadaan',
-    recommendation: 'Lakukan pengadaan ulang sesuai dengan prosedur yang berlaku',
-    status: 'In Progress',
-    dueDate: new Date('2024-02-01')
+    title: 'Dokumentasi Pengadaan Tidak Lengkap',
+    description: 'Beberapa dokumen kontrak dan berita acara penerimaan barang tidak tersimpan dengan baik',
+    severity: 'Sedang',
+    category: 'Kepatuhan',
+    recommendation: 'Menyusun sistem filing dan dokumentasi yang lebih tertib',
+    status: 'Terbuka',
+    auditContext: 'Audit Keuangan Dinas Pendidikan 2024',
+    responsibleParty: 'Kepala Bagian Umum',
+    findingDate: '2024-01-13',
+    createdAt: new Date('2024-01-13'),
+    updatedAt: new Date('2024-01-13')
   },
   {
-    title: 'Keterlambatan pelaporan',
-    description: 'Laporan keuangan tidak disampaikan tepat waktu',
-    severity: 'Low',
-    category: 'Pelaporan',
-    recommendation: 'Buat sistem reminder untuk pelaporan tepat waktu',
-    status: 'Resolved',
-    dueDate: new Date('2024-01-30')
+    title: 'Target Cakupan Imunisasi Belum Tercapai',
+    description: 'Capaian imunisasi dasar hanya 78% dari target 90% pada tahun 2023',
+    severity: 'Tinggi',
+    category: 'Kinerja',
+    recommendation: 'Meningkatkan sosialisasi dan jangkauan pelayanan imunisasi',
+    status: 'Selesai',
+    auditContext: 'Audit Kinerja Program Kesehatan',
+    responsibleParty: 'Kepala Bidang Kesehatan Masyarakat',
+    findingDate: '2024-01-10',
+    createdAt: new Date('2024-01-10'),
+    updatedAt: new Date('2024-01-10')
   }
 ];
 
@@ -774,6 +786,9 @@ export const seedAllData = async () => {
     
     // Seed extended audits
     await seedExtendedAudits();
+    
+    // Seed findings
+    await seedFindings();
     
     console.log('Data seeding completed successfully!');
   } catch (error) {

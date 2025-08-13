@@ -8,6 +8,9 @@ import {
   FiDownload,
   FiTrash2
 } from 'react-icons/fi';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { COLLECTIONS } from '../constants/collections';
 import { cloudinaryService } from '../services/cloudinaryService';
 
 const FileUploadModal = ({ 
@@ -15,7 +18,7 @@ const FileUploadModal = ({
   onClose, 
   onSuccess, 
   auditId, 
-  type = 'workPaper', // 'workPaper', 'evidence', 'interview', 'note'
+  type = 'document', // 'workPaper', 'evidence', 'interview', 'note', 'document'
   title = 'Upload File'
 }) => {
   const [files, setFiles] = useState([]);
@@ -28,9 +31,17 @@ const FileUploadModal = ({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: '',
-    status: 'Draft'
+    category: 'Kertas Kerja',
+    tags: ''
   });
+
+  const categories = [
+    'Kertas Kerja',
+    'Bukti Audit', 
+    'Laporan',
+    'Template',
+    'Regulasi'
+  ];
 
   const handleFileSelect = (selectedFiles) => {
     const newFiles = Array.from(selectedFiles).map(file => ({
@@ -96,39 +107,32 @@ const FileUploadModal = ({
             // Validate file menggunakan Cloudinary service
             cloudinaryService.validateFile(fileItem.file);
             
-            // Prepare upload data
-            const uploadData = {
+            // Upload to Cloudinary
+            const uploadResult = await cloudinaryService.uploadDocument(fileItem.file);
+            
+            // Prepare document data
+            const documentData = {
+              fileName: fileItem.file.name,
+              fileSize: fileItem.file.size,
+              fileType: fileItem.file.type,
+              fileUrl: uploadResult.secure_url,
+              publicId: uploadResult.public_id,
               title: formData.title,
               description: formData.description,
-              type: formData.type || 'Document',
-              status: formData.status,
-              uploadedBy: 'current-user' // This should come from auth context
+              category: formData.category,
+              tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+              uploadedBy: 'current-user', // This should come from auth context
+              uploadDate: serverTimestamp(),
+              auditId: auditId || null
             };
             
-            let result;
-            
-            // Upload berdasarkan type menggunakan Cloudinary
-            switch (type) {
-              case 'workPaper':
-                result = await cloudinaryService.uploadWorkPaper(auditId, fileItem.file, uploadData);
-                break;
-              case 'evidence':
-                result = await cloudinaryService.uploadEvidence(auditId, fileItem.file, uploadData);
-                break;
-              case 'interview':
-                result = await cloudinaryService.uploadInterviewRecording(auditId, fileItem.file, uploadData);
-                break;
-              case 'note':
-                result = await cloudinaryService.uploadNoteAttachment(auditId, fileItem.file, uploadData);
-                break;
-              default:
-                throw new Error('Invalid upload type');
-            }
+            // Save to Firestore
+            const docRef = await addDoc(collection(db, COLLECTIONS.DOCUMENTS), documentData);
             
             // Update file status
             setFiles(prev => prev.map(f => 
               f.id === fileItem.id 
-                ? { ...f, status: 'success', result }
+                ? { ...f, status: 'success', result: { ...uploadResult, docId: docRef.id } }
                 : f
             ));
             
@@ -195,18 +199,14 @@ const FileUploadModal = ({
                 />
               </div>
               <div className="form-group">
-                <label>Tipe</label>
+                <label>Kategori</label>
                 <select
-                  value={formData.type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                  value={formData.category}
+                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                 >
-                  <option value="">Pilih tipe</option>
-                  <option value="Document">Dokumen</option>
-                  <option value="Photo">Foto</option>
-                  <option value="Video">Video</option>
-                  <option value="Audio">Audio</option>
-                  <option value="Spreadsheet">Spreadsheet</option>
-                  <option value="Presentation">Presentasi</option>
+                  {categories.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -218,6 +218,16 @@ const FileUploadModal = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Masukkan deskripsi dokumen"
                 rows={3}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Tags</label>
+              <input
+                type="text"
+                value={formData.tags}
+                onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
+                placeholder="Masukkan tags (pisahkan dengan koma)"
               />
             </div>
           </div>

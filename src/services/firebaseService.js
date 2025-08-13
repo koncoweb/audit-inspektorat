@@ -348,6 +348,42 @@ export const findingService = {
     }));
   },
 
+  async getFindingsByStatus(status) {
+    const q = query(
+      collection(db, COLLECTIONS.AUDIT_FINDINGS),
+      where('status', '==', status)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
+  async getFindingsBySeverity(severity) {
+    const q = query(
+      collection(db, COLLECTIONS.AUDIT_FINDINGS),
+      where('severity', '==', severity)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
+  async getFindingsByCategory(category) {
+    const q = query(
+      collection(db, COLLECTIONS.AUDIT_FINDINGS),
+      where('category', '==', category)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
   async createFinding(findingData) {
     return await addDoc(collection(db, COLLECTIONS.AUDIT_FINDINGS), {
       ...findingData,
@@ -362,6 +398,20 @@ export const findingService = {
       ...findingData,
       updatedAt: new Date()
     });
+  },
+
+  async deleteFinding(findingId) {
+    const docRef = doc(db, COLLECTIONS.AUDIT_FINDINGS, findingId);
+    return await deleteDoc(docRef);
+  },
+
+  async getFindingById(findingId) {
+    const docRef = doc(db, COLLECTIONS.AUDIT_FINDINGS, findingId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
   }
 };
 
@@ -482,8 +532,110 @@ export const dashboardService = {
         inProgressAudits: 0
       };
     }
+  },
+
+  // Report Statistics
+  async getReportStats() {
+    try {
+      const [audits, findings, followUps] = await Promise.all([
+        getDocs(collection(db, COLLECTIONS.AUDITS)),
+        getDocs(collection(db, COLLECTIONS.AUDIT_FINDINGS)),
+        getDocs(collection(db, COLLECTIONS.FOLLOW_UPS))
+      ]);
+
+      const totalAudit = audits.size;
+      const selesai = audits.docs.filter(doc => doc.data().status === 'Selesai').length;
+      const totalTemuan = findings.size;
+      const ditindaklanjuti = followUps.size;
+      const prioritasTinggi = findings.docs.filter(doc => doc.data().severity === 'Tinggi').length;
+
+      // Calculate average duration
+      const completedAudits = audits.docs.filter(doc => doc.data().status === 'Selesai');
+      let totalDuration = 0;
+      let validAudits = 0;
+
+      completedAudits.forEach(doc => {
+        const audit = doc.data();
+        if (audit.startDate && audit.endDate) {
+          const start = new Date(audit.startDate.seconds * 1000);
+          const end = new Date(audit.endDate.seconds * 1000);
+          const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+          totalDuration += duration;
+          validAudits++;
+        }
+      });
+
+      const rataRataDurasi = validAudits > 0 ? Math.round(totalDuration / validAudits) : 0;
+
+      return {
+        totalAudit,
+        selesai,
+        totalTemuan,
+        ditindaklanjuti,
+        prioritasTinggi,
+        rataRataDurasi
+      };
+    } catch (error) {
+      console.error('Error fetching report stats:', error);
+      return {
+        totalAudit: 0,
+        selesai: 0,
+        totalTemuan: 0,
+        ditindaklanjuti: 0,
+        prioritasTinggi: 0,
+        rataRataDurasi: 0
+      };
+    }
+  },
+
+  // Get trend data for reports
+  async getTrendData() {
+    try {
+      const [audits, findings] = await Promise.all([
+        getDocs(collection(db, COLLECTIONS.AUDITS)),
+        getDocs(collection(db, COLLECTIONS.AUDIT_FINDINGS))
+      ]);
+
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      const currentDate = new Date();
+      
+      return months.map((month, index) => {
+        const monthIndex = currentDate.getMonth() - 5 + index;
+        const year = currentDate.getFullYear();
+        
+        // Count audits and findings for this month
+        const monthAudits = audits.docs.filter(doc => {
+          const audit = doc.data();
+          if (audit.createdAt) {
+            const auditDate = new Date(audit.createdAt.seconds * 1000);
+            return auditDate.getMonth() === monthIndex && auditDate.getFullYear() === year;
+          }
+          return false;
+        }).length;
+
+        const monthFindings = findings.docs.filter(doc => {
+          const finding = doc.data();
+          if (finding.createdAt) {
+            const findingDate = new Date(finding.createdAt.seconds * 1000);
+            return findingDate.getMonth() === monthIndex && findingDate.getFullYear() === year;
+          }
+          return false;
+        }).length;
+
+        return {
+          month,
+          audit: monthAudits,
+          temuan: monthFindings
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching trend data:', error);
+      return [];
+    }
   }
 };
+
+
 
 // Work Papers Management
 export const workPaperService = {
@@ -731,5 +883,58 @@ export const auditDetailService = {
       console.error('Error getting audit statistics:', error);
       throw error;
     }
+  }
+};
+
+// Unified Firebase Service for easy access
+export const firebaseService = {
+  // User management
+  ...userService,
+  
+  // Audit management
+  ...auditService,
+  
+  // Finding management
+  ...findingService,
+  
+  // Document management
+  ...documentService,
+  
+  // Follow-up management
+  ...followUpService,
+  
+  // Report management
+  ...reportService,
+  
+  // Dashboard statistics
+  ...dashboardService,
+  
+  // Work paper management
+  ...workPaperService,
+  
+  // Evidence management
+  ...evidenceService,
+  
+  // Notes management
+  ...notesService,
+  
+  // Audit detail management
+  ...auditDetailService,
+  
+  // Specific methods for Temuan Audit page
+  async getAuditFindings() {
+    return await findingService.getAllFindings();
+  },
+  
+  async createAuditFinding(findingData) {
+    return await findingService.createFinding(findingData);
+  },
+  
+  async updateAuditFinding(findingId, findingData) {
+    return await findingService.updateFinding(findingId, findingData);
+  },
+  
+  async deleteAuditFinding(findingId) {
+    return await findingService.deleteFinding(findingId);
   }
 };

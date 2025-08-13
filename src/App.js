@@ -11,6 +11,9 @@ import Register from './pages/Register';
 import Admin from './pages/Admin';
 import PerencanaanAudit from './pages/PerencanaanAudit';
 import PelaksanaanAudit from './pages/PelaksanaanAudit';
+import TemuanAudit from './pages/TemuanAudit';
+import Laporan from './pages/Laporan';
+import Dokumen from './pages/Dokumen';
 import './styles/global.css';
 
 function App() {
@@ -58,6 +61,26 @@ function App() {
         return {
           title: 'Si-MAIL',
           subtitle: 'Sistem Manajemen Audit Internal'
+        };
+      case '/pelaksanaan':
+        return {
+          title: 'Si-MAIL',
+          subtitle: 'Sistem Manajemen Audit Internal'
+        };
+      case '/temuan':
+        return {
+          title: 'SI-ADIT',
+          subtitle: 'Sistem Informasi Auditor Internal'
+        };
+      case '/laporan':
+        return {
+          title: 'SI-ADIT',
+          subtitle: 'Sistem Informasi Auditor Internal'
+        };
+      case '/dokumen':
+        return {
+          title: 'SI-ADIT',
+          subtitle: 'Sistem Informasi Auditor Internal'
         };
       case '/admin':
         return {
@@ -124,9 +147,9 @@ function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/perencanaan" element={<PerencanaanAudit />} />
           <Route path="/pelaksanaan" element={<PelaksanaanAudit />} />
-          <Route path="/temuan" element={<div>Temuan Audit Page</div>} />
-          <Route path="/laporan" element={<div>Laporan Page</div>} />
-          <Route path="/dokumen" element={<div>Dokumen Page</div>} />
+          <Route path="/temuan" element={<TemuanAudit />} />
+          <Route path="/laporan" element={<Laporan />} />
+          <Route path="/dokumen" element={<Dokumen />} />
           <Route path="/tindak-lanjut" element={<div>Tindak Lanjut Page</div>} />
           <Route path="/manajemen-user" element={<div>Manajemen User Page</div>} />
           <Route path="/panduan" element={<div>Panduan Page</div>} />

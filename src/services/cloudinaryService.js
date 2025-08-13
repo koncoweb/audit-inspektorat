@@ -356,6 +356,37 @@ export const cloudinaryService = {
     }
   },
 
+  // Upload general document
+  async uploadDocument(file) {
+    try {
+      console.log('Starting document upload to Cloudinary...');
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+      formData.append('folder', `auditmorowaliutara/documents`);
+      
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Cloudinary upload error:', errorData);
+        throw new Error(`Upload failed: ${errorData.error?.message || 'Unknown error'}`);
+      }
+      
+      const result = await response.json();
+      console.log('Cloudinary upload success:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      throw error;
+    }
+  },
+
   // Upload note attachment
   async uploadNoteAttachment(auditId, file, noteData) {
     try {
@@ -585,23 +616,48 @@ export const cloudinaryService = {
       const cloudinaryId = fileData.cloudinaryId;
       
       if (cloudinaryId) {
-        // Delete from Cloudinary
-        const timestamp = Math.round((new Date()).getTime() / 1000);
-        const signature = this.generateSignature(cloudinaryId, timestamp);
-        
-        const formData = new FormData();
-        formData.append('public_id', cloudinaryId);
-        formData.append('signature', signature);
-        formData.append('api_key', CLOUDINARY_CONFIG.apiKey);
-        formData.append('timestamp', timestamp);
-        
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/destroy`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          console.warn('Failed to delete from Cloudinary, but continuing with Firestore deletion');
+        // Try to delete from Cloudinary using admin API
+        try {
+          const timestamp = Math.round((new Date()).getTime() / 1000);
+          const signature = await this.generateSignature(cloudinaryId, timestamp);
+          
+          const formData = new FormData();
+          formData.append('public_id', cloudinaryId);
+          formData.append('signature', signature);
+          formData.append('api_key', CLOUDINARY_CONFIG.apiKey);
+          formData.append('timestamp', timestamp);
+          
+          // Try to determine resource type from file extension or use 'auto'
+          const fileExtension = cloudinaryId.split('.').pop()?.toLowerCase();
+          let resourceType = 'auto';
+          
+          if (fileExtension) {
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension)) {
+              resourceType = 'image';
+            } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(fileExtension)) {
+              resourceType = 'video';
+            } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(fileExtension)) {
+              resourceType = 'video'; // Cloudinary stores audio as video
+            } else {
+              resourceType = 'raw';
+            }
+          }
+          
+          const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/${resourceType}/destroy`, {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.warn('Failed to delete from Cloudinary:', errorData);
+            console.warn('Continuing with Firestore deletion only');
+          } else {
+            console.log('Successfully deleted from Cloudinary');
+          }
+        } catch (cloudinaryError) {
+          console.warn('Error deleting from Cloudinary:', cloudinaryError);
+          console.warn('Continuing with Firestore deletion only');
         }
       }
       
@@ -668,53 +724,149 @@ export const cloudinaryService = {
         notes: []
       };
       
-      // Get work papers
-      const workPapersQuery = query(
-        collection(db, `audits/${auditId}/workPapers`),
-        where('isDeleted', '!=', true),
-        orderBy('uploadedAt', 'desc')
-      );
-      const workPapersSnapshot = await getDocs(workPapersQuery);
-      files.workPapers = workPapersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      // Get work papers - use orderBy on isDeleted first, then uploadedAt
+      try {
+        const workPapersQuery = query(
+          collection(db, `audits/${auditId}/workPapers`),
+          orderBy('isDeleted', 'asc'),
+          orderBy('uploadedAt', 'desc')
+        );
+        const workPapersSnapshot = await getDocs(workPapersQuery);
+        files.workPapers = workPapersSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter(file => !file.isDeleted); // Filter in memory as backup
+      } catch (error) {
+        console.warn('Error loading work papers:', error);
+        // Fallback: try without orderBy
+        try {
+          const workPapersSnapshot = await getDocs(collection(db, `audits/${auditId}/workPapers`));
+          files.workPapers = workPapersSnapshot.docs
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter(file => !file.isDeleted)
+            .sort((a, b) => {
+              const dateA = a.uploadedAt?.toDate?.() || a.uploadedAt || new Date(0);
+              const dateB = b.uploadedAt?.toDate?.() || b.uploadedAt || new Date(0);
+              return dateB - dateA;
+            });
+        } catch (fallbackError) {
+          console.warn('Fallback query also failed:', fallbackError);
+          files.workPapers = [];
+        }
+      }
       
       // Get evidence
-      const evidenceQuery = query(
-        collection(db, `audits/${auditId}/evidence`),
-        where('isDeleted', '!=', true),
-        orderBy('uploadedAt', 'desc')
-      );
-      const evidenceSnapshot = await getDocs(evidenceQuery);
-      files.evidence = evidenceSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      try {
+        const evidenceQuery = query(
+          collection(db, `audits/${auditId}/evidence`),
+          orderBy('isDeleted', 'asc'),
+          orderBy('uploadedAt', 'desc')
+        );
+        const evidenceSnapshot = await getDocs(evidenceQuery);
+        files.evidence = evidenceSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter(file => !file.isDeleted);
+      } catch (error) {
+        console.warn('Error loading evidence:', error);
+        // Fallback: try without orderBy
+        try {
+          const evidenceSnapshot = await getDocs(collection(db, `audits/${auditId}/evidence`));
+          files.evidence = evidenceSnapshot.docs
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter(file => !file.isDeleted)
+            .sort((a, b) => {
+              const dateA = a.uploadedAt?.toDate?.() || a.uploadedAt || new Date(0);
+              const dateB = b.uploadedAt?.toDate?.() || b.uploadedAt || new Date(0);
+              return dateB - dateA;
+            });
+        } catch (fallbackError) {
+          console.warn('Fallback query also failed:', fallbackError);
+          files.evidence = [];
+        }
+      }
       
       // Get interviews
-      const interviewsQuery = query(
-        collection(db, `audits/${auditId}/interviews`),
-        where('isDeleted', '!=', true),
-        orderBy('uploadedAt', 'desc')
-      );
-      const interviewsSnapshot = await getDocs(interviewsQuery);
-      files.interviews = interviewsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      try {
+        const interviewsQuery = query(
+          collection(db, `audits/${auditId}/interviews`),
+          orderBy('isDeleted', 'asc'),
+          orderBy('uploadedAt', 'desc')
+        );
+        const interviewsSnapshot = await getDocs(interviewsQuery);
+        files.interviews = interviewsSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter(file => !file.isDeleted);
+      } catch (error) {
+        console.warn('Error loading interviews:', error);
+        // Fallback: try without orderBy
+        try {
+          const interviewsSnapshot = await getDocs(collection(db, `audits/${auditId}/interviews`));
+          files.interviews = interviewsSnapshot.docs
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter(file => !file.isDeleted)
+            .sort((a, b) => {
+              const dateA = a.uploadedAt?.toDate?.() || a.uploadedAt || new Date(0);
+              const dateB = b.uploadedAt?.toDate?.() || b.uploadedAt || new Date(0);
+              return dateB - dateA;
+            });
+        } catch (fallbackError) {
+          console.warn('Fallback query also failed:', fallbackError);
+          files.interviews = [];
+        }
+      }
       
       // Get notes
-      const notesQuery = query(
-        collection(db, `audits/${auditId}/notes`),
-        where('isDeleted', '!=', true),
-        orderBy('uploadedAt', 'desc')
-      );
-      const notesSnapshot = await getDocs(notesQuery);
-      files.notes = notesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      try {
+        const notesQuery = query(
+          collection(db, `audits/${auditId}/notes`),
+          orderBy('isDeleted', 'asc'),
+          orderBy('uploadedAt', 'desc')
+        );
+        const notesSnapshot = await getDocs(notesQuery);
+        files.notes = notesSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter(file => !file.isDeleted);
+      } catch (error) {
+        console.warn('Error loading notes:', error);
+        // Fallback: try without orderBy
+        try {
+          const notesSnapshot = await getDocs(collection(db, `audits/${auditId}/notes`));
+          files.notes = notesSnapshot.docs
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+            .filter(file => !file.isDeleted)
+            .sort((a, b) => {
+              const dateA = a.uploadedAt?.toDate?.() || a.uploadedAt || new Date(0);
+              const dateB = b.uploadedAt?.toDate?.() || b.uploadedAt || new Date(0);
+              return dateB - dateA;
+            });
+        } catch (fallbackError) {
+          console.warn('Fallback query also failed:', fallbackError);
+          files.notes = [];
+        }
+      }
       
       return files;
     } catch (error) {
@@ -724,7 +876,7 @@ export const cloudinaryService = {
   },
 
   // Generate signature for authenticated requests
-  generateSignature(publicId, timestamp) {
+  async generateSignature(publicId, timestamp) {
     const params = {
       public_id: publicId,
       timestamp: timestamp
@@ -739,19 +891,30 @@ export const cloudinaryService = {
       .map(([key, value]) => `${key}=${value}`)
       .join('&') + CLOUDINARY_CONFIG.apiSecret;
     
-    return this.sha1(signatureString);
+    return await this.sha1(signatureString);
   },
 
-  // Simple SHA-1 implementation
-  sha1(str) {
-    let hash = 0;
-    if (str.length === 0) return hash.toString();
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+  // Simple SHA-1 implementation using Web Crypto API
+  async sha1(str) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(str);
+      const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    } catch (error) {
+      console.warn('Web Crypto API not available, using fallback hash');
+      // Fallback to simple hash
+      let hash = 0;
+      if (str.length === 0) return hash.toString();
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(16);
     }
-    return Math.abs(hash).toString(16);
   },
 
   // Validate file before upload

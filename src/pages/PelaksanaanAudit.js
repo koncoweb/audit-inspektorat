@@ -29,6 +29,7 @@ import {
 } from 'react-icons/fi';
 import { auditService } from '../services/firebaseService';
 import FileUploadModal from '../components/FileUploadModal';
+import FileList from '../components/FileList';
 
 const PelaksanaanAudit = () => {
   const [activeAudits, setActiveAudits] = useState([]);
@@ -46,13 +47,13 @@ const PelaksanaanAudit = () => {
 
   // Extended audit data structure
   const [auditDetails, setAuditDetails] = useState({
-    workPapers: 12,
-    evidence: 28,
-    interviews: 5,
-    findings: 8,
-    overallProgress: 75,
+    workPapers: 0,
+    evidence: 0,
+    interviews: 0,
+    findings: 0,
+    overallProgress: 0,
     currentStage: 'Persiapan',
-    stageProgress: 25
+    stageProgress: 0
   });
 
   // File upload modal states
@@ -66,27 +67,99 @@ const PelaksanaanAudit = () => {
   const loadActiveAudits = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('Loading active audits...');
+      
       const audits = await auditService.getExecutionAudits();
+      console.log('Audits loaded:', audits);
+      
       const executionStats = await auditService.getExecutionStats();
+      console.log('Execution stats:', executionStats);
       
-      setActiveAudits(audits);
-      setStats({
-        total: executionStats.total || 0,
-        ongoing: executionStats.ongoing || 0,
-        completed: executionStats.completed || 0,
-        pending: executionStats.approved || 0
-      });
-      
-      // Set first audit as selected by default
-      if (audits.length > 0 && !selectedAudit) {
-        setSelectedAudit(audits[0]);
+      // If no audits found, provide some sample data for testing
+      if (!audits || audits.length === 0) {
+        console.log('No audits found, using sample data');
+        const sampleAudits = [
+          {
+            id: 'sample-1',
+            title: 'Audit Keuangan Dinas Pendidikan',
+            department: 'Dinas Pendidikan',
+            status: 'Berlangsung',
+            progress: 65,
+            type: 'Keuangan',
+            priority: 'Tinggi',
+            description: 'Audit keuangan tahunan untuk Dinas Pendidikan',
+            period: '2024',
+            team: [
+              { name: 'Sri Wahyuni', role: 'Ketua Tim' },
+              { name: 'Ahmad Rahman', role: 'Anggota' }
+            ],
+            workPapersCount: 3,
+            evidenceCount: 8,
+            interviewsCount: 2,
+            findingsCount: 5,
+            updatedAt: new Date()
+          },
+          {
+            id: 'sample-2',
+            title: 'Audit Kinerja Dinas Kesehatan',
+            department: 'Dinas Kesehatan',
+            status: 'Dalam Proses',
+            progress: 45,
+            type: 'Kinerja',
+            priority: 'Sedang',
+            description: 'Audit kinerja program kesehatan masyarakat',
+            period: '2024',
+            team: [
+              { name: 'Siti Nurhaliza', role: 'Ketua Tim' },
+              { name: 'Budi Santoso', role: 'Anggota' }
+            ],
+            workPapersCount: 2,
+            evidenceCount: 5,
+            interviewsCount: 1,
+            findingsCount: 3,
+            updatedAt: new Date()
+          }
+        ];
+        setActiveAudits(sampleAudits);
+        setStats({
+          total: 2,
+          ongoing: 1,
+          completed: 0,
+          pending: 1
+        });
+        
+        if (!selectedAudit) {
+          setSelectedAudit(sampleAudits[0]);
+        }
+      } else {
+        setActiveAudits(audits);
+        setStats({
+          total: executionStats?.total || 0,
+          ongoing: executionStats?.ongoing || 0,
+          completed: executionStats?.completed || 0,
+          pending: executionStats?.approved || 0
+        });
+        
+        // Set first audit as selected by default only if no audit is currently selected
+        if (!selectedAudit) {
+          console.log('Setting first audit as selected:', audits[0]);
+          setSelectedAudit(audits[0]);
+        }
       }
     } catch (error) {
       console.error('Error loading active audits:', error);
+      // Set empty arrays to prevent undefined errors
+      setActiveAudits([]);
+      setStats({
+        total: 0,
+        ongoing: 0,
+        completed: 0,
+        pending: 0
+      });
     } finally {
       setLoading(false);
     }
-  }, [selectedAudit]);
+  }, []); // Remove selectedAudit dependency to prevent infinite loop
 
   useEffect(() => {
     loadActiveAudits();
@@ -147,9 +220,74 @@ const PelaksanaanAudit = () => {
     }).format(amount || 0);
   };
 
+  // Function to update audit details based on selected audit
+  const updateAuditDetails = useCallback((audit) => {
+    console.log('Updating audit details for:', audit);
+    
+    if (!audit) {
+      console.log('No audit selected, setting default values');
+      setAuditDetails({
+        workPapers: 0,
+        evidence: 0,
+        interviews: 0,
+        findings: 0,
+        overallProgress: 0,
+        currentStage: 'Persiapan',
+        stageProgress: 0
+      });
+      return;
+    }
+
+    const newAuditDetails = {
+      workPapers: audit.workPapersCount || 0,
+      evidence: audit.evidenceCount || 0,
+      interviews: audit.interviewsCount || 0,
+      findings: audit.findingsCount || 0,
+      overallProgress: audit.progress || 0,
+      currentStage: audit.currentStage || audit.status || 'Persiapan',
+      stageProgress: audit.stageProgress || 0
+    };
+    
+    console.log('Setting audit details:', newAuditDetails);
+    setAuditDetails(newAuditDetails);
+  }, []);
+
+  // Update audit details when selected audit changes
+  useEffect(() => {
+    updateAuditDetails(selectedAudit);
+  }, [selectedAudit, updateAuditDetails]);
+
+  // Function to refresh selected audit data
+  const refreshSelectedAudit = useCallback(async (currentSelectedAudit) => {
+    if (!currentSelectedAudit) return;
+    
+    try {
+      const audits = await auditService.getExecutionAudits();
+      const updatedSelectedAudit = audits.find(audit => audit.id === currentSelectedAudit.id);
+      if (updatedSelectedAudit) {
+        setSelectedAudit(updatedSelectedAudit);
+      }
+    } catch (error) {
+      console.error('Error refreshing selected audit:', error);
+    }
+  }, []); // Remove selectedAudit dependency
+
   const handleUploadSuccess = () => {
     // Refresh data after successful upload
     loadActiveAudits();
+    // Refresh selected audit data
+    if (selectedAudit) {
+      refreshSelectedAudit(selectedAudit);
+    }
+    // Force re-render of file lists
+    setActiveTab(activeTab);
+  };
+
+  const handleFileDeleted = () => {
+    // Refresh audit details after file deletion
+    if (selectedAudit) {
+      refreshSelectedAudit(selectedAudit);
+    }
   };
 
   const handleUploadModalClose = () => {
@@ -164,7 +302,9 @@ const PelaksanaanAudit = () => {
     setUploadModalOpen(true);
   };
 
-  const filteredAudits = activeAudits.filter(audit => {
+  const filteredAudits = (activeAudits || []).filter(audit => {
+    if (!audit || !audit.title || !audit.department) return false;
+    
     const matchesSearch = audit.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          audit.department.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || audit.status === statusFilter;
@@ -337,19 +477,21 @@ const PelaksanaanAudit = () => {
                     <FiDownload />
                     Export
                   </button>
-                  <button className="btn-primary">
+                  <button 
+                    className="btn-primary"
+                    onClick={() => openUploadModal('workPaper', 'Tambah Kertas Kerja')}
+                  >
                     <FiPlus />
                     Tambah Kertas Kerja
                   </button>
                 </div>
               </div>
               <div className="workpaper-list">
-                <div className="empty-state">
-                  <FiFileText size={48} />
-                  <h4>Belum ada kertas kerja</h4>
-                  <p>Mulai dengan membuat kertas kerja pertama untuk audit ini</p>
-                  <button className="btn-primary">Buat Kertas Kerja Pertama</button>
-                </div>
+                <FileList 
+                  auditId={selectedAudit.id} 
+                  fileType="workPaper"
+                  onFileDeleted={handleFileDeleted}
+                />
               </div>
             </div>
           </div>
@@ -365,19 +507,21 @@ const PelaksanaanAudit = () => {
                     <FiUpload />
                     Bulk Upload
                   </button>
-                  <button className="btn-primary">
+                  <button 
+                    className="btn-primary"
+                    onClick={() => openUploadModal('evidence', 'Upload Bukti Audit')}
+                  >
                     <FiPlus />
                     Upload Bukti
                   </button>
                 </div>
               </div>
               <div className="evidence-list">
-                <div className="empty-state">
-                  <FiPaperclip size={48} />
-                  <h4>Belum ada bukti audit</h4>
-                  <p>Upload bukti audit untuk mendukung temuan dan kesimpulan</p>
-                  <button className="btn-primary">Upload Bukti Pertama</button>
-                </div>
+                <FileList 
+                  auditId={selectedAudit.id} 
+                  fileType="evidence"
+                  onFileDeleted={handleFileDeleted}
+                />
               </div>
             </div>
           </div>
@@ -440,19 +584,21 @@ const PelaksanaanAudit = () => {
                     <FiDownload />
                     Export
                   </button>
-                  <button className="btn-primary">
+                  <button 
+                    className="btn-primary"
+                    onClick={() => openUploadModal('note', 'Tambah Catatan')}
+                  >
                     <FiPlus />
                     Tambah Catatan
                   </button>
                 </div>
               </div>
               <div className="notes-list">
-                <div className="empty-state">
-                  <FiMessageSquare size={48} />
-                  <h4>Belum ada catatan</h4>
-                  <p>Tambahkan catatan penting selama pelaksanaan audit</p>
-                  <button className="btn-primary">Tambah Catatan Pertama</button>
-                </div>
+                <FileList 
+                  auditId={selectedAudit.id} 
+                  fileType="note"
+                  onFileDeleted={handleFileDeleted}
+                />
               </div>
             </div>
           </div>

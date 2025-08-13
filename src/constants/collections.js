@@ -70,6 +70,23 @@ export const FINDING_SEVERITY = {
   HIGH: 'Tinggi'
 };
 
+// Finding Status Constants
+export const FINDING_STATUS = {
+  OPEN: 'Terbuka',
+  IN_PROGRESS: 'Dalam Proses',
+  IN_FOLLOW_UP: 'Dalam Tindak Lanjut',
+  COMPLETED: 'Selesai'
+};
+
+// Finding Category Constants
+export const FINDING_CATEGORY = {
+  FINANCIAL: 'Keuangan',
+  COMPLIANCE: 'Kepatuhan',
+  PERFORMANCE: 'Kinerja',
+  OPERATIONAL: 'Operasional',
+  SYSTEM: 'Sistem'
+};
+
 // User Role Constants
 export const USER_ROLE = {
   ADMINISTRATOR: 'Administrator',
