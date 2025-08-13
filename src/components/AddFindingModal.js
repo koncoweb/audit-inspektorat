@@ -17,6 +17,8 @@ const AddFindingModal = ({ isOpen, onClose, onSave, audits = [] }) => {
     category: FINDING_CATEGORY.COMPLIANCE,
     status: FINDING_STATUS.OPEN,
     auditContext: '',
+    auditId: '', // Tambah field auditId
+    auditTitle: '', // Tambah field auditTitle
     responsibleParty: '',
     findingDate: new Date().toISOString().split('T')[0]
   });
@@ -64,6 +66,21 @@ const AddFindingModal = ({ isOpen, onClose, onSave, audits = [] }) => {
         [name]: ''
       }));
     }
+
+    // Jika audit dipilih, set auditId dan auditTitle
+    if (name === 'auditContext') {
+      const selectedAudit = availableAudits.find(audit => 
+        (audit.title || audit.name) === value
+      );
+      if (selectedAudit) {
+        console.log('Selected audit:', selectedAudit);
+        setFormData(prev => ({
+          ...prev,
+          auditId: selectedAudit.id, // Document ID dari Firestore
+          auditTitle: selectedAudit.title || selectedAudit.name
+        }));
+      }
+    }
   };
 
   const validateForm = () => {
@@ -83,6 +100,14 @@ const AddFindingModal = ({ isOpen, onClose, onSave, audits = [] }) => {
     
     if (!formData.auditContext.trim()) {
       newErrors.auditContext = 'Audit harus dipilih';
+    }
+    
+    if (!formData.auditId.trim()) {
+      newErrors.auditContext = 'Audit ID tidak valid';
+    }
+    
+    if (!formData.auditTitle.trim()) {
+      newErrors.auditContext = 'Audit Title tidak valid';
     }
     
     if (!formData.responsibleParty.trim()) {
@@ -115,6 +140,8 @@ const AddFindingModal = ({ isOpen, onClose, onSave, audits = [] }) => {
       category: FINDING_CATEGORY.COMPLIANCE,
       status: FINDING_STATUS.OPEN,
       auditContext: '',
+      auditId: '', // Reset auditId
+      auditTitle: '', // Reset auditTitle
       responsibleParty: '',
       findingDate: new Date().toISOString().split('T')[0]
     });
@@ -215,12 +242,18 @@ const AddFindingModal = ({ isOpen, onClose, onSave, audits = [] }) => {
                 <option value="">Pilih audit...</option>
                 {availableAudits.map(audit => (
                   <option key={audit.id} value={audit.title || audit.name}>
-                    {audit.title || audit.name} - {audit.status}
+                    {audit.title || audit.name} - {audit.status} (ID: {audit.id})
                   </option>
                 ))}
               </select>
               {loadingAudits && <span className="loading-text">Memuat data audit...</span>}
               {errors.auditContext && <span className="error-message">{errors.auditContext}</span>}
+              {formData.auditId && (
+                <div className="audit-info">
+                  <small>Audit ID: {formData.auditId}</small>
+                  <small>Audit Title: {formData.auditTitle}</small>
+                </div>
+              )}
             </div>
           </div>
 

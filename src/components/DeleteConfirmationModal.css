@@ -1,0 +1,117 @@
+/* Delete Confirmation Modal Styles */
+.delete-confirmation-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.delete-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delete-icon {
+  width: 24px;
+  height: 24px;
+  color: #ef4444;
+}
+
+.delete-content {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.delete-message {
+  font-size: 1rem;
+  color: #374151;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.item-to-delete {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.item-label {
+  display: block;
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.item-name {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #991b1b;
+  word-break: break-word;
+}
+
+.delete-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #ef4444;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0;
+}
+
+.warning-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
+}
+
+.btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .delete-confirmation-modal {
+    width: 95%;
+    margin: 20px;
+  }
+
+  .delete-header {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .delete-content {
+    padding: 16px 0;
+  }
+
+  .delete-message {
+    font-size: 0.875rem;
+  }
+
+  .delete-warning {
+    font-size: 0.75rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 4px;
+  }
+}

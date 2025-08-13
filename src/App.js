@@ -14,6 +14,7 @@ import PelaksanaanAudit from './pages/PelaksanaanAudit';
 import TemuanAudit from './pages/TemuanAudit';
 import Laporan from './pages/Laporan';
 import Dokumen from './pages/Dokumen';
+import TindakLanjut from './pages/TindakLanjut';
 import './styles/global.css';
 
 function App() {
@@ -78,6 +79,11 @@ function App() {
           subtitle: 'Sistem Informasi Auditor Internal'
         };
       case '/dokumen':
+        return {
+          title: 'SI-ADIT',
+          subtitle: 'Sistem Informasi Auditor Internal'
+        };
+      case '/tindak-lanjut':
         return {
           title: 'SI-ADIT',
           subtitle: 'Sistem Informasi Auditor Internal'
@@ -150,7 +156,7 @@ function App() {
           <Route path="/temuan" element={<TemuanAudit />} />
           <Route path="/laporan" element={<Laporan />} />
           <Route path="/dokumen" element={<Dokumen />} />
-          <Route path="/tindak-lanjut" element={<div>Tindak Lanjut Page</div>} />
+          <Route path="/tindak-lanjut" element={<TindakLanjut />} />
           <Route path="/manajemen-user" element={<div>Manajemen User Page</div>} />
           <Route path="/panduan" element={<div>Panduan Page</div>} />
           <Route path="/pengaturan" element={<div>Pengaturan Page</div>} />

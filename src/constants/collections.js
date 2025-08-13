@@ -93,3 +93,18 @@ export const USER_ROLE = {
   AUDITOR: 'Auditor',
   SUPERVISOR: 'Supervisor'
 };
+
+// Follow-up Status Constants
+export const FOLLOW_UP_STATUS = {
+  NOT_STARTED: 'Belum Mulai',
+  IN_PROGRESS: 'Dalam Proses',
+  COMPLETED: 'Selesai',
+  OVERDUE: 'Terlambat'
+};
+
+// Follow-up Priority Constants
+export const FOLLOW_UP_PRIORITY = {
+  LOW: 'Rendah',
+  MEDIUM: 'Sedang',
+  HIGH: 'Tinggi'
+};
