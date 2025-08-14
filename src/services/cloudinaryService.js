@@ -12,12 +12,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-// Cloudinary Configuration sesuai settingan Anda
+// Cloudinary Configuration dari environment variables
 const CLOUDINARY_CONFIG = {
-  cloudName: 'kbisnisassets',
-  uploadPreset: 'auditmorowali',
-  apiKey: '638824498464139',
-  apiSecret: 'xLEtFZ-89IjfBLtfgCs0pKYtXno'
+  cloudName: process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || 'kbisnisassets',
+  uploadPreset: process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET || 'auditmorowali',
+  apiKey: process.env.REACT_APP_CLOUDINARY_API_KEY || '638824498464139',
+  apiSecret: process.env.REACT_APP_CLOUDINARY_API_SECRET || 'xLEtFZ-89IjfBLtfgCs0pKYtXno'
 };
 
 // Cloudinary service for handling file uploads dengan integrasi Firestore
