@@ -387,6 +387,51 @@ export const cloudinaryService = {
     }
   },
 
+  // Simple file upload function for general use (logo, profile photos, etc.)
+  async uploadFile(file, folder = 'auditmorowaliutara/general') {
+    try {
+      console.log('Starting file upload to Cloudinary...');
+      
+      // Validate file
+      this.validateFile(file, 10 * 1024 * 1024); // 10MB max for general files
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+      formData.append('folder', folder);
+      
+      // No transformation parameters for unsigned upload
+      // File will be uploaded as-is
+      
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Cloudinary upload error:', errorData);
+        throw new Error(`Upload failed: ${errorData.error?.message || 'Unknown error'}`);
+      }
+      
+      const result = await response.json();
+      console.log('Cloudinary upload success:', result);
+      
+      return {
+        secure_url: result.secure_url,
+        public_id: result.public_id,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+        bytes: result.bytes,
+        original_filename: result.original_filename
+      };
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
+  },
+
   // Upload note attachment
   async uploadNoteAttachment(auditId, file, noteData) {
     try {

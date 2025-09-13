@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase/config';
 import { userService } from './services/firebaseService';
+import { initializeAppSettings } from './utils/initializeAppSettings';
+import { AppSettingsProvider } from './contexts/AppSettingsContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
@@ -15,6 +17,7 @@ import TemuanAudit from './pages/TemuanAudit';
 import Laporan from './pages/Laporan';
 import Dokumen from './pages/Dokumen';
 import TindakLanjut from './pages/TindakLanjut';
+import Pengaturan from './pages/Pengaturan';
 import './styles/global.css';
 
 function App() {
@@ -24,6 +27,9 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
+    // Initialize app settings
+    initializeAppSettings();
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -93,6 +99,11 @@ function App() {
           title: 'Admin Panel',
           subtitle: 'Kelola pengaturan sistem'
         };
+      case '/pengaturan':
+        return {
+          title: 'Pengaturan',
+          subtitle: 'Kelola pengaturan aplikasi dan profil'
+        };
       default:
         return {
           title: 'Si-MAIL',
@@ -126,44 +137,48 @@ function App() {
   // If user is not authenticated, show login and register routes
   if (!user) {
     return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <AppSettingsProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AppSettingsProvider>
     );
   }
 
   // If user is authenticated, show main app layout
   return (
-    <div className="app-container">
-      <Sidebar />
-      <div className="main-content">
-        <Header 
-          title={pageInfo.title}
-          subtitle={pageInfo.subtitle}
-          user={{
-            name: userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User',
-            role: userProfile?.role || 'Auditor'
-          }}
-          onLogout={handleLogout}
-        />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/perencanaan" element={<PerencanaanAudit />} />
-          <Route path="/pelaksanaan" element={<PelaksanaanAudit />} />
-          <Route path="/temuan" element={<TemuanAudit />} />
-          <Route path="/laporan" element={<Laporan />} />
-          <Route path="/dokumen" element={<Dokumen />} />
-          <Route path="/tindak-lanjut" element={<TindakLanjut />} />
-          <Route path="/manajemen-user" element={<div>Manajemen User Page</div>} />
-          <Route path="/panduan" element={<div>Panduan Page</div>} />
-          <Route path="/pengaturan" element={<div>Pengaturan Page</div>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+    <AppSettingsProvider>
+      <div className="app-container">
+        <Sidebar />
+        <div className="main-content">
+          <Header 
+            title={pageInfo.title}
+            subtitle={pageInfo.subtitle}
+            user={{
+              name: userProfile?.name || user.displayName || user.email?.split('@')[0] || 'User',
+              role: userProfile?.role || 'Auditor'
+            }}
+            onLogout={handleLogout}
+          />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/perencanaan" element={<PerencanaanAudit />} />
+            <Route path="/pelaksanaan" element={<PelaksanaanAudit />} />
+            <Route path="/temuan" element={<TemuanAudit />} />
+            <Route path="/laporan" element={<Laporan />} />
+            <Route path="/dokumen" element={<Dokumen />} />
+            <Route path="/tindak-lanjut" element={<TindakLanjut />} />
+            <Route path="/manajemen-user" element={<div>Manajemen User Page</div>} />
+            <Route path="/panduan" element={<div>Panduan Page</div>} />
+            <Route path="/pengaturan" element={<Pengaturan />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </AppSettingsProvider>
   );
 }
 

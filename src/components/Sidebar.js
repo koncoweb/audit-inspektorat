@@ -12,9 +12,11 @@ import {
   FiHelpCircle, 
   FiSettings 
 } from 'react-icons/fi';
+import { useAppSettings } from '../contexts/AppSettingsContext';
 
 const Sidebar = () => {
   const location = useLocation();
+  const { appSettings } = useAppSettings();
 
   const navItems = [
     { path: '/', icon: FiHome, label: 'Dashboard' },
@@ -34,12 +36,20 @@ const Sidebar = () => {
       <div className="sidebar-header">
         <div className="logo">
           <div className="logo-icon">
-            <FiShield />
+            {appSettings.logoUrl ? (
+              <img 
+                src={appSettings.logoUrl} 
+                alt="Logo" 
+                className="logo-image"
+              />
+            ) : (
+              <FiShield />
+            )}
           </div>
           <div className="logo-text">
-            <div className="logo-main">MOROWALI UTARA</div>
-            <div className="logo-sub">Inspektorat</div>
-            <div className="logo-sub">Kabupaten Morowali Utara</div>
+            <div className="logo-main">{appSettings.appName || 'Si-MAIL'}</div>
+            <div className="logo-sub">{appSettings.appSubtitle || 'Sistem Manajemen Audit Internal'}</div>
+            <div className="logo-sub">{appSettings.organizationName || 'Inspektorat Kabupaten Morowali Utara'}</div>
           </div>
         </div>
       </div>

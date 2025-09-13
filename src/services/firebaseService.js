@@ -26,7 +26,8 @@ const COLLECTIONS = {
   REPORTS: 'reports',
   WORK_PAPERS: 'work_papers',
   AUDIT_EVIDENCE: 'audit_evidence',
-  AUDIT_NOTES: 'audit_notes'
+  AUDIT_NOTES: 'audit_notes',
+  APP_SETTINGS: 'app_settings'
 };
 
 // User Management
@@ -160,7 +161,7 @@ export const auditService = {
 
   // Get audits for planning page (Draft, Disetujui, Berlangsung, Selesai)
   async getPlanningAudits() {
-    const planningStatuses = ['Draft'];
+    const planningStatuses = ['Draft', 'Disetujui', 'Berlangsung', 'Selesai'];
     const q = query(
       collection(db, COLLECTIONS.AUDITS),
       where('status', 'in', planningStatuses)
@@ -303,8 +304,11 @@ export const auditService = {
     const audits = querySnapshot.docs.map(doc => doc.data());
     
     return {
-      total: audits.filter(audit => ['Draft'].includes(audit.status)).length,
+      total: audits.length,
       draft: audits.filter(audit => audit.status === 'Draft').length,
+      approved: audits.filter(audit => audit.status === 'Disetujui').length,
+      ongoing: audits.filter(audit => audit.status === 'Berlangsung').length,
+      completed: audits.filter(audit => audit.status === 'Selesai').length,
       highPriority: audits.filter(audit => audit.priority === 'Tinggi').length
     };
   },
@@ -480,11 +484,67 @@ export const followUpService = {
 // Reports
 export const reportService = {
   async getAllReports() {
-    const querySnapshot = await getDocs(collection(db, COLLECTIONS.REPORTS));
+    const q = query(
+      collection(db, COLLECTIONS.REPORTS),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+  },
+
+  async getReportsByType(type) {
+    const q = query(
+      collection(db, COLLECTIONS.REPORTS),
+      where('type', '==', type),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
+  async getReportsByStatus(status) {
+    const q = query(
+      collection(db, COLLECTIONS.REPORTS),
+      where('status', '==', status),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
+  async getReportsByYear(year) {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31);
+    
+    const q = query(
+      collection(db, COLLECTIONS.REPORTS),
+      where('createdAt', '>=', startDate),
+      where('createdAt', '<=', endDate),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
+  async getReportById(reportId) {
+    const docRef = doc(db, COLLECTIONS.REPORTS, reportId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
   },
 
   async createReport(reportData) {
@@ -493,6 +553,95 @@ export const reportService = {
       createdAt: new Date(),
       updatedAt: new Date()
     });
+  },
+
+  async updateReport(reportId, reportData) {
+    const docRef = doc(db, COLLECTIONS.REPORTS, reportId);
+    return await updateDoc(docRef, {
+      ...reportData,
+      updatedAt: new Date()
+    });
+  },
+
+  async deleteReport(reportId) {
+    const docRef = doc(db, COLLECTIONS.REPORTS, reportId);
+    return await deleteDoc(docRef);
+  },
+
+  // Generate report from audit data
+  async generateReportFromAudits(auditIds, reportType, reportTitle, createdBy) {
+    try {
+      // Get audit data
+      const audits = [];
+      for (const auditId of auditIds) {
+        const audit = await auditService.getAuditById(auditId);
+        if (audit) {
+          // Get findings for this audit
+          const findings = await findingService.getFindingsByAuditId(auditId);
+          audits.push({
+            ...audit,
+            findings: findings
+          });
+        }
+      }
+
+      // Calculate summary statistics
+      const totalAudits = audits.length;
+      const totalFindings = audits.reduce((sum, audit) => sum + audit.findings.length, 0);
+      const completedAudits = audits.filter(audit => audit.status === 'Selesai').length;
+      
+      // Create report data
+      const reportData = {
+        title: reportTitle,
+        type: reportType,
+        status: 'Draft',
+        createdBy: createdBy,
+        auditIds: auditIds,
+        totalAudits: totalAudits,
+        totalFindings: totalFindings,
+        completedAudits: completedAudits,
+        period: this.generatePeriodString(audits),
+        summary: this.generateReportSummary(audits),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      return await this.createReport(reportData);
+    } catch (error) {
+      console.error('Error generating report from audits:', error);
+      throw error;
+    }
+  },
+
+  generatePeriodString(audits) {
+    if (audits.length === 0) return '';
+    
+    const dates = audits.map(audit => new Date(audit.startDate?.seconds * 1000 || audit.createdAt?.seconds * 1000)).filter(date => !isNaN(date));
+    if (dates.length === 0) return '';
+    
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+    
+    const formatDate = (date) => {
+      return date.toLocaleDateString('id-ID', { 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    };
+    
+    if (minDate.getFullYear() === maxDate.getFullYear() && minDate.getMonth() === maxDate.getMonth()) {
+      return formatDate(minDate);
+    }
+    
+    return `${formatDate(minDate)} - ${formatDate(maxDate)}`;
+  },
+
+  generateReportSummary(audits) {
+    const totalAudits = audits.length;
+    const totalFindings = audits.reduce((sum, audit) => sum + audit.findings.length, 0);
+    const completedAudits = audits.filter(audit => audit.status === 'Selesai').length;
+    
+    return `${totalAudits} audit, ${totalFindings} temuan`;
   }
 };
 
@@ -886,6 +1035,50 @@ export const auditDetailService = {
   }
 };
 
+// App Settings Management
+export const appSettingsService = {
+  async getAppSettings() {
+    try {
+      const docRef = doc(db, COLLECTIONS.APP_SETTINGS, 'main');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data();
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting app settings:', error);
+      throw error;
+    }
+  },
+
+  async updateAppSettings(settings) {
+    try {
+      const docRef = doc(db, COLLECTIONS.APP_SETTINGS, 'main');
+      await setDoc(docRef, {
+        ...settings,
+        updatedAt: new Date()
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error updating app settings:', error);
+      throw error;
+    }
+  },
+
+  async createAppSettings(settings) {
+    try {
+      const docRef = doc(db, COLLECTIONS.APP_SETTINGS, 'main');
+      await setDoc(docRef, {
+        ...settings,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error creating app settings:', error);
+      throw error;
+    }
+  }
+};
+
 // Unified Firebase Service for easy access
 export const firebaseService = {
   // User management
@@ -920,6 +1113,9 @@ export const firebaseService = {
   
   // Audit detail management
   ...auditDetailService,
+  
+  // App settings management
+  ...appSettingsService,
   
   // Specific methods for Temuan Audit page
   async getAuditFindings() {

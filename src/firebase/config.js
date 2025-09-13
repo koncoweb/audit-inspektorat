@@ -12,6 +12,14 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
+// Debug: Log Firebase config (remove in production)
+console.log('Firebase Config:', {
+  apiKey: firebaseConfig.apiKey ? '***' + firebaseConfig.apiKey.slice(-4) : 'undefined',
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId,
+  hasApiKey: !!firebaseConfig.apiKey
+});
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 

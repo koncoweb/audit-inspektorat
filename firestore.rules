@@ -6,6 +6,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
     // Users collection
     match /users/{userId} {
       allow read, write: if isAuthenticated();
@@ -96,6 +102,13 @@ service cloud.firestore {
     match /audit_notes/{noteId} {
       allow read, write: if isAuthenticated();
       allow read: if true; // Temporary for testing
+    }
+
+    // App Settings collection - Only admins can read/write
+    match /app_settings/{settingId} {
+      allow read, write: if isAdmin();
+      // Allow read for authenticated users to display app info
+      allow read: if isAuthenticated();
     }
   }
 }

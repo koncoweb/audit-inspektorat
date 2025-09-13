@@ -65,8 +65,8 @@ const PerencanaanAudit = () => {
   const loadAuditPlans = async () => {
     try {
       setLoading(true);
-      // Load only draft audit plans
-      // After approval, audits will appear in the Pelaksanaan Audit page
+      // Load all audit plans (Draft, Disetujui, Berlangsung, Selesai)
+      // All audit plans remain in this page regardless of status
       const plans = await auditService.getPlanningAudits();
       setAuditPlans(plans);
       
@@ -379,7 +379,7 @@ const PerencanaanAudit = () => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="department">Departemen/Unit *</label>
+              <label htmlFor="department">Unit Auditee *</label>
               <input
                 type="text"
                 id="department"
@@ -532,13 +532,12 @@ const PerencanaanAudit = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="description">Deskripsi *</label>
+            <label htmlFor="description">Deskripsi</label>
             <textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              required
               disabled={isViewMode}
               rows="3"
               placeholder="Deskripsi singkat tentang rencana audit"
@@ -547,13 +546,12 @@ const PerencanaanAudit = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="scope">Ruang Lingkup *</label>
+              <label htmlFor="scope">Ruang Lingkup</label>
               <textarea
                 id="scope"
                 name="scope"
                 value={formData.scope}
                 onChange={handleInputChange}
-                required
                 disabled={isViewMode}
                 rows="3"
                 placeholder="Ruang lingkup audit yang akan dilakukan"
@@ -561,13 +559,12 @@ const PerencanaanAudit = () => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="objectives">Tujuan Audit *</label>
+              <label htmlFor="objectives">Tujuan Audit</label>
               <textarea
                 id="objectives"
                 name="objectives"
                 value={formData.objectives}
                 onChange={handleInputChange}
-                required
                 disabled={isViewMode}
                 rows="3"
                 placeholder="Tujuan dan sasaran audit"
@@ -719,6 +716,9 @@ const PerencanaanAudit = () => {
             >
               <option value="Semua Status">Semua Status</option>
               <option value="Draft">Draft</option>
+              <option value="Disetujui">Disetujui</option>
+              <option value="Berlangsung">Berlangsung</option>
+              <option value="Selesai">Selesai</option>
             </select>
           </div>
           

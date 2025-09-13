@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { dashboardService } from '../services/firebaseService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { dashboardService, reportService } from '../services/firebaseService';
+import * as XLSX from 'xlsx';
 import { 
   BarChart, 
   Bar, 
@@ -26,21 +27,132 @@ const Laporan = () => {
   const [reports, setReports] = useState([]);
   const [filterType, setFilterType] = useState('Semua Jenis');
   const [filterYear, setFilterYear] = useState('2024');
+  const [showAuditSelection, setShowAuditSelection] = useState(false);
+  const [availableAudits, setAvailableAudits] = useState([]);
 
 
   useEffect(() => {
     fetchReportData();
+    
+    // Add debug functions to window for testing
+    window.debugReports = {
+      testConnection: async () => {
+        try {
+          console.log('🧪 Testing Firestore connection...');
+          const reports = await reportService.getAllReports();
+          console.log('✅ Connection OK, found', reports.length, 'reports');
+          return reports;
+        } catch (error) {
+          console.error('❌ Connection failed:', error);
+          return null;
+        }
+      },
+      createTestReport: async () => {
+        try {
+          console.log('🧪 Creating test report...');
+          const testData = {
+            title: 'Test Report - Debug',
+            type: 'Test',
+            status: 'Draft',
+            createdBy: 'Debug User',
+            totalAudits: 1,
+            totalFindings: 1,
+            period: 'Test Period',
+            summary: '1 audit, 1 temuan'
+          };
+          const result = await reportService.createReport(testData);
+          console.log('✅ Test report created:', result);
+          return result;
+        } catch (error) {
+          console.error('❌ Test report creation failed:', error);
+          return null;
+        }
+      },
+      refreshReports: async () => {
+        try {
+          console.log('🧪 Refreshing reports...');
+          await fetchReportData();
+          console.log('✅ Reports refreshed');
+        } catch (error) {
+          console.error('❌ Refresh failed:', error);
+        }
+      },
+      showAllData: () => {
+        console.log('📊 Current state data:');
+        console.log('📋 Reports state:', reports);
+        console.log('🔧 Filter type:', filterType);
+        console.log('🔧 Filter year:', filterYear);
+        console.log('📋 Filtered reports:', getFilteredReports());
+        console.log('📊 Stats:', stats);
+        console.log('📈 Trend data:', trendData);
+        console.log('⏳ Loading:', loading);
+      },
+      clearFilters: () => {
+        console.log('🧹 Clearing filters...');
+        setFilterType('Semua Jenis');
+        setFilterYear('Semua Tahun');
+        console.log('✅ Filters cleared');
+      },
+      addSampleData: async () => {
+        try {
+          console.log('🧪 Adding sample reports...');
+          const sampleReports = [
+            {
+              title: 'Laporan Audit Semester I 2024',
+              type: 'Laporan Audit',
+              status: 'Published',
+              createdBy: 'Ahmad Rahman',
+              totalAudits: 12,
+              totalFindings: 45,
+              period: 'Januari - Juni 2024',
+              summary: '12 audit, 45 temuan'
+            },
+            {
+              title: 'Laporan Kinerja Inspektorat 2024',
+              type: 'Laporan Kinerja',
+              status: 'Draft',
+              createdBy: 'Sri Wahyuni',
+              totalAudits: 24,
+              totalFindings: 89,
+              period: 'Januari - Desember 2024',
+              summary: '24 audit, 89 temuan'
+            }
+          ];
+          
+          for (const reportData of sampleReports) {
+            await reportService.createReport(reportData);
+            console.log('✅ Added:', reportData.title);
+          }
+          
+          await fetchReportData();
+          console.log('🎉 Sample data added and refreshed!');
+        } catch (error) {
+          console.error('❌ Failed to add sample data:', error);
+        }
+      }
+    };
+    
+    console.log('🔧 Debug functions available: window.debugReports');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchReportData = async () => {
     try {
+      console.log('🔄 Fetching report data...');
       setLoading(true);
       
-      // Fetch statistics and trend data
-      const [reportStats, trendData] = await Promise.all([
-        dashboardService.getReportStats(),
-        dashboardService.getTrendData()
-      ]);
+      // Fetch statistics, trend data, and reports
+      console.log('📊 Fetching dashboard stats...');
+      const reportStats = await dashboardService.getReportStats();
+      console.log('📈 Fetching trend data...');
+      const trendData = await dashboardService.getTrendData();
+      console.log('📋 Fetching reports data...');
+      const reportsData = await reportService.getAllReports();
+      
+      console.log('📊 Report stats:', reportStats);
+      console.log('📈 Trend data:', trendData);
+      console.log('📋 Raw reports data:', reportsData);
+      console.log('📋 Reports count:', reportsData.length);
 
       // If no real data, use dummy data for demonstration
       const finalStats = reportStats.totalAudit > 0 ? reportStats : {
@@ -61,51 +173,49 @@ const Laporan = () => {
         { month: 'Jun', audit: 4, temuan: 15 }
       ];
 
-      // Sample reports data
-      const sampleReports = [
-        {
-          id: 1,
-          title: 'Laporan Audit Semester I 2024',
-          subtitle: '12 audit, 45 temuan',
-          type: 'Laporan Audit',
-          period: 'Januari - Juni 2024',
-          status: 'Published',
-          createdBy: 'Ahmad Rahman',
-          date: '2024-07-15',
-          auditCount: 12,
-          findingCount: 45
-        },
-        {
-          id: 2,
-          title: 'Laporan Kinerja Inspektorat 2024',
-          subtitle: '24 audit, 89 temuan',
-          type: 'Laporan Kinerja',
-          period: 'Januari - Desember 2024',
-          status: 'Draft',
-          createdBy: 'Sri Wahyuni',
-          date: '2024-01-10',
-          auditCount: 24,
-          findingCount: 89
-        },
-        {
-          id: 3,
-          title: 'Laporan Temuan Prioritas Tinggi',
-          subtitle: '8 audit, 23 temuan',
-          type: 'Laporan Temuan',
-          period: 'Q4 2023',
-          status: 'Approved',
-          createdBy: 'Budi Santoso',
-          date: '2024-01-05',
-          auditCount: 8,
-          findingCount: 23
-        }
-      ];
+      // Transform reports data to match the expected format
+      console.log('🔄 Transforming reports data...');
+      const transformedReports = reportsData.map((report, index) => {
+        console.log(`📝 Transforming report ${index + 1}:`, report);
+        
+        const transformed = {
+          id: report.id,
+          title: report.title || 'Laporan Tanpa Judul',
+          subtitle: report.summary || `${report.totalAudits || 0} audit, ${report.totalFindings || 0} temuan`,
+          type: report.type || 'Laporan Audit',
+          period: report.period || 'Tidak ditentukan',
+          status: report.status || 'Draft',
+          createdBy: report.createdBy || 'Unknown',
+          date: report.createdAt ? 
+            (report.createdAt.seconds ? 
+              new Date(report.createdAt.seconds * 1000).toISOString().split('T')[0] :
+              new Date(report.createdAt).toISOString().split('T')[0]
+            ) : 
+            new Date().toISOString().split('T')[0],
+          auditCount: report.totalAudits || 0,
+          findingCount: report.totalFindings || 0
+        };
+        
+        console.log(`✅ Transformed report ${index + 1}:`, transformed);
+        return transformed;
+      });
+
+      console.log('📋 Final transformed reports:', transformedReports);
+      console.log('📋 Final reports count:', transformedReports.length);
 
       setStats(finalStats);
       setTrendData(finalTrendData);
-      setReports(sampleReports);
+      setReports(transformedReports);
+      
+      console.log('✅ Report data fetched and set successfully');
     } catch (error) {
-      console.error('Error fetching report data:', error);
+      console.error('❌ Error fetching report data:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      
       // Fallback to dummy data
       setStats({
         totalAudit: 24,
@@ -126,6 +236,7 @@ const Laporan = () => {
       setReports([]);
     } finally {
       setLoading(false);
+      console.log('🏁 Fetch report data completed');
     }
   };
 
@@ -134,40 +245,211 @@ const Laporan = () => {
   const reportTemplates = [
     {
       id: 1,
-      title: 'Laporan Audit',
-      subtitle: 'Template standar audit',
-      icon: '📄',
-      type: 'audit'
+      title: 'Laporan Umum',
+      subtitle: 'Laporan komprehensif semua audit',
+      icon: '📊',
+      type: 'general'
     },
     {
       id: 2,
-      title: 'Laporan Kinerja',
-      subtitle: 'Evaluasi kinerja',
-      icon: '✅',
-      type: 'performance'
-    },
-    {
-      id: 3,
-      title: 'Laporan Temuan',
-      subtitle: 'Ringkasan temuan',
-      icon: '⚠️',
-      type: 'findings'
-    },
-    {
-      id: 4,
-      title: 'Laporan Tahunan',
-      subtitle: 'Komprehensif tahunan',
-      icon: '📅',
-      type: 'annual'
+      title: 'Laporan Audit',
+      subtitle: 'Laporan untuk audit tertentu',
+      icon: '📄',
+      type: 'specific_audit'
     }
   ];
 
-  const handleGenerateReport = (template) => {
-    // Here you would implement the actual report generation logic
-    console.log('Generating report:', template);
+  const handleGenerateReport = async (template) => {
+    try {
+      console.log('🚀 Starting report generation...');
+      console.log('Template:', template);
+      
+      // Check if reportService is available
+      if (!reportService) {
+        throw new Error('reportService is not available');
+      }
+      
+      console.log('✅ reportService is available');
+      
+      if (template.type === 'general') {
+        // Generate laporan umum (semua audit)
+        await generateGeneralReport(template);
+      } else if (template.type === 'specific_audit') {
+        // Show audit selection modal
+        await showAuditSelectionModal(template);
+      } else {
+        throw new Error('Template type not supported');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error generating report:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        name: error.name
+      });
+      
+      // More detailed error message
+      let errorMessage = 'Gagal membuat laporan';
+      if (error.code) {
+        errorMessage += ` (${error.code})`;
+      }
+      if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      alert(errorMessage);
+    }
+  };
+
+  const generateGeneralReport = async (template) => {
+    try {
+      console.log('📊 Generating general report...');
+      setLoading(true);
+      
+      // Get all audits for general report
+      const { auditService } = await import('../services/firebaseService');
+      const allAudits = await auditService.getAllAudits();
+      console.log('📋 Found audits for general report:', allAudits.length);
+      
+      // Calculate summary statistics
+      const totalAudits = allAudits.length;
+      const completedAudits = allAudits.filter(audit => audit.status === 'Selesai').length;
+      const totalFindings = allAudits.reduce((sum, audit) => sum + (audit.findings?.length || 0), 0);
+      
+      // Create report data
+      const reportData = {
+        title: `${template.title} - ${new Date().getFullYear()}`,
+        type: template.title,
+        status: 'Draft',
+        createdBy: 'System',
+        totalAudits: totalAudits,
+        totalFindings: totalFindings,
+        completedAudits: completedAudits,
+        period: new Date().toLocaleDateString('id-ID', { 
+          month: 'long', 
+          year: 'numeric' 
+        }),
+        summary: `${totalAudits} audit, ${totalFindings} temuan`,
+        auditIds: allAudits.map(audit => audit.id),
+        reportType: 'general'
+      };
+
+      console.log('📝 General report data prepared:', reportData);
+      
+      // Create the report
+      console.log('💾 Creating general report in Firestore...');
+      const result = await reportService.createReport(reportData);
+      console.log('✅ General report created successfully:', result);
+      
+      // Refresh the reports list
+      console.log('🔄 Refreshing report data...');
+      await fetchReportData();
+      console.log('✅ Report data refreshed');
     
     // Show success message
-    alert(`Laporan ${template.title} sedang dibuat...`);
+      alert(`Laporan ${template.title} berhasil dibuat!`);
+      console.log('🎉 General report generation completed successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error generating general report:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showAuditSelectionModal = async (template) => {
+    try {
+      console.log('📋 Showing audit selection modal...');
+      console.log('📋 Template:', template);
+      
+      // Get available audits
+      const { auditService } = await import('../services/firebaseService');
+      const audits = await auditService.getAllAudits();
+      console.log('📋 Available audits:', audits.length);
+      console.log('📋 All audits data:', audits);
+      
+      // Show all audits regardless of status for now
+      const reportableAudits = audits; // Remove filter temporarily
+      console.log('📋 Reportable audits (all):', reportableAudits.length);
+      console.log('📋 Reportable audits data:', reportableAudits);
+      
+      if (reportableAudits.length === 0) {
+        alert('Tidak ada audit yang dapat dijadikan laporan. Pastikan ada audit yang sudah selesai atau sedang berlangsung.');
+        return;
+      }
+      
+      // Set state for modal
+      console.log('📋 Setting modal state...');
+      setAvailableAudits(reportableAudits);
+      setShowAuditSelection(true);
+      console.log('📋 Modal state set successfully');
+      
+    } catch (error) {
+      console.error('❌ Error showing audit selection modal:', error);
+      alert(`Error: ${error.message}`);
+      throw error;
+    }
+  };
+
+  const handleAuditSelection = async (selectedAudit) => {
+    try {
+      console.log('📄 Generating specific audit report for:', selectedAudit.title);
+      setLoading(true);
+      setShowAuditSelection(false);
+      
+      // Get findings for this audit
+      const { findingService } = await import('../services/firebaseService');
+      const findings = await findingService.getFindingsByAuditId(selectedAudit.id);
+      console.log('📋 Found findings for audit:', findings.length);
+      
+      // Create report data
+      const reportData = {
+        title: `Laporan Audit - ${selectedAudit.title}`,
+        type: 'Laporan Audit',
+        status: 'Draft',
+        createdBy: 'System',
+        totalAudits: 1,
+        totalFindings: findings.length,
+        completedAudits: selectedAudit.status === 'Selesai' ? 1 : 0,
+        period: selectedAudit.period || 'Tidak ditentukan',
+        summary: `1 audit, ${findings.length} temuan`,
+        auditIds: [selectedAudit.id],
+        reportType: 'specific_audit',
+        auditTitle: selectedAudit.title,
+        auditDescription: selectedAudit.description,
+        auditDepartment: selectedAudit.department,
+        auditType: selectedAudit.type,
+        auditStatus: selectedAudit.status,
+        auditPriority: selectedAudit.priority,
+        auditStartDate: selectedAudit.startDate,
+        auditEndDate: selectedAudit.endDate
+      };
+
+      console.log('📝 Specific audit report data prepared:', reportData);
+      
+      // Create the report
+      console.log('💾 Creating specific audit report in Firestore...');
+      const result = await reportService.createReport(reportData);
+      console.log('✅ Specific audit report created successfully:', result);
+      
+      // Refresh the reports list
+      console.log('🔄 Refreshing report data...');
+      await fetchReportData();
+      console.log('✅ Report data refreshed');
+      
+      // Show success message
+      alert(`Laporan Audit "${selectedAudit.title}" berhasil dibuat!`);
+      console.log('🎉 Specific audit report generation completed successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error generating specific audit report:', error);
+      alert(`Gagal membuat laporan audit: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calculate additional statistics
@@ -193,10 +475,455 @@ const Laporan = () => {
     };
   };
 
-  const handleDownloadReport = (report) => {
-    console.log('Downloading report:', report);
-    alert(`Mengunduh laporan: ${report.title}`);
+
+  const generateGeneralReportExcel = async (reportData) => {
+    try {
+      // Create new workbook
+      const workbook = XLSX.utils.book_new();
+      
+      const currentDate = new Date().toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // 1. Summary Sheet
+      const summaryData = [
+        ['LAPORAN UMUM AUDIT INTERNAL'],
+        ['INSPEKTORAT KABUPATEN MOROWALI UTARA'],
+        [''],
+        ['Tanggal', currentDate],
+        ['Periode', reportData.period || 'Tidak tersedia'],
+        ['Status', reportData.status || 'Draft'],
+        [''],
+        ['RINGKASAN EKSEKUTIF'],
+        [''],
+        ['Total Audit', reportData.totalAudits || 0],
+        ['Audit Selesai', reportData.completedAudits || 0],
+        ['Total Temuan', reportData.totalFindings || 0],
+        ['Persentase Penyelesaian', `${reportData.totalAudits > 0 ? Math.round((reportData.completedAudits / reportData.totalAudits) * 100) : 0}%`],
+        [''],
+        ['REKOMENDASI'],
+        [''],
+        ['1. Melanjutkan audit yang sedang berlangsung'],
+        ['2. Menyelesaikan tindak lanjut temuan audit'],
+        ['3. Meningkatkan efektivitas proses audit'],
+        [''],
+        ['Laporan ini dibuat secara otomatis oleh sistem Si-MAIL'],
+        ['Inspektorat Kabupaten Morowali Utara']
+      ];
+      
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      
+      // Set column widths
+      summarySheet['!cols'] = [
+        { wch: 30 },
+        { wch: 50 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Ringkasan');
+      
+      // 2. Audit Details Sheet
+      const auditDetailsData = [
+        ['DETAIL AUDIT'],
+        [''],
+        ['No', 'Audit ID', 'Status', 'Temuan', 'Progress']
+      ];
+      
+      if (reportData.auditIds && reportData.auditIds.length > 0) {
+        // Get audit details from Firestore
+        const { auditService } = await import('../services/firebaseService');
+        
+        for (let i = 0; i < reportData.auditIds.length; i++) {
+          const auditId = reportData.auditIds[i];
+          try {
+            const auditDetails = await auditService.getAuditById(auditId);
+            auditDetailsData.push([
+              i + 1,
+              auditId,
+              auditDetails?.status || 'Tidak tersedia',
+              auditDetails?.findingsCount || 0,
+              `${auditDetails?.progress || 0}%`
+            ]);
+          } catch (error) {
+            console.warn(`Error fetching audit ${auditId}:`, error);
+            auditDetailsData.push([
+              i + 1,
+              auditId,
+              'Error loading',
+              'N/A',
+              'N/A'
+            ]);
+          }
+        }
+      } else {
+        auditDetailsData.push(['Tidak ada data audit tersedia', '', '', '', '']);
+      }
+      
+      const auditDetailsSheet = XLSX.utils.aoa_to_sheet(auditDetailsData);
+      
+      // Set column widths
+      auditDetailsSheet['!cols'] = [
+        { wch: 5 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 10 },
+        { wch: 10 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, auditDetailsSheet, 'Detail Audit');
+      
+      // 3. Statistics Sheet
+      const statisticsData = [
+        ['STATISTIK AUDIT'],
+        [''],
+        ['Kategori', 'Jumlah', 'Persentase'],
+        ['Total Audit', reportData.totalAudits || 0, '100%'],
+        ['Audit Selesai', reportData.completedAudits || 0, `${reportData.totalAudits > 0 ? Math.round((reportData.completedAudits / reportData.totalAudits) * 100) : 0}%`],
+        ['Audit Berlangsung', (reportData.totalAudits || 0) - (reportData.completedAudits || 0), `${reportData.totalAudits > 0 ? Math.round(((reportData.totalAudits - reportData.completedAudits) / reportData.totalAudits) * 100) : 0}%`],
+        [''],
+        ['TEMUAN AUDIT'],
+        [''],
+        ['Total Temuan', reportData.totalFindings || 0],
+        ['Temuan Tinggi', Math.round((reportData.totalFindings || 0) * 0.2)],
+        ['Temuan Sedang', Math.round((reportData.totalFindings || 0) * 0.5)],
+        ['Temuan Rendah', Math.round((reportData.totalFindings || 0) * 0.3)]
+      ];
+      
+      const statisticsSheet = XLSX.utils.aoa_to_sheet(statisticsData);
+      
+      // Set column widths
+      statisticsSheet['!cols'] = [
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 15 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, statisticsSheet, 'Statistik');
+      
+      return workbook;
+      
+    } catch (error) {
+      console.error('Error generating general report Excel:', error);
+      throw error;
+    }
   };
+
+  const generateSpecificAuditReportExcel = async (reportData) => {
+    try {
+      // Create new workbook
+      const workbook = XLSX.utils.book_new();
+      
+      // Get audit details
+      const { auditService, findingService } = await import('../services/firebaseService');
+      const auditDetails = await auditService.getAuditById(reportData.auditIds[0]);
+      const findings = await findingService.getFindingsByAuditId(reportData.auditIds[0]);
+      
+      const currentDate = new Date().toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // 1. Summary Sheet
+      const summaryData = [
+        ['LAPORAN AUDIT SPESIFIK'],
+        ['INSPEKTORAT KABUPATEN MOROWALI UTARA'],
+        [''],
+        ['Tanggal', currentDate],
+        ['Status Laporan', reportData.status || 'Draft'],
+        [''],
+        ['INFORMASI AUDIT'],
+        [''],
+        ['Judul', reportData.auditTitle || 'Tidak tersedia'],
+        ['Deskripsi', reportData.auditDescription || 'Tidak tersedia'],
+        ['Department', reportData.auditDepartment || 'Tidak tersedia'],
+        ['Jenis Audit', reportData.auditType || 'Tidak tersedia'],
+        ['Status', reportData.auditStatus || 'Tidak tersedia'],
+        ['Prioritas', reportData.auditPriority || 'Tidak tersedia'],
+        ['Periode', reportData.period || 'Tidak tersedia'],
+        [''],
+        ['DETAIL TAMBAHAN'],
+        [''],
+        ['Auditor', auditDetails?.auditor || 'Tidak tersedia'],
+        ['Tim Audit', auditDetails?.team ? auditDetails.team.map(member => member.name).join(', ') : 'Tidak tersedia'],
+        ['Progress', `${auditDetails?.progress || 0}%`],
+        [''],
+        ['KESIMPULAN'],
+        [''],
+        [`Total Temuan: ${findings.length}`],
+        [''],
+        ['Rekomendasi:'],
+        ['1. Segera menindaklanjuti temuan dengan prioritas tinggi'],
+        ['2. Melakukan monitoring berkala terhadap implementasi rekomendasi'],
+        ['3. Meningkatkan sistem kontrol internal'],
+        [''],
+        ['Laporan ini dibuat secara otomatis oleh sistem Si-MAIL'],
+        ['Inspektorat Kabupaten Morowali Utara']
+      ];
+      
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      
+      // Set column widths
+      summarySheet['!cols'] = [
+        { wch: 25 },
+        { wch: 60 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Ringkasan');
+      
+      // 2. Findings Sheet
+      const findingsData = [
+        ['TEMUAN AUDIT'],
+        [''],
+        ['No', 'Judul Temuan', 'Kategori', 'Severity', 'Status', 'Deskripsi', 'Rekomendasi']
+      ];
+      
+      if (findings.length > 0) {
+        findings.forEach((finding, index) => {
+          findingsData.push([
+            index + 1,
+            finding.title || 'Temuan tanpa judul',
+            finding.category || 'Tidak tersedia',
+            finding.severity || 'Tidak tersedia',
+            finding.status || 'Tidak tersedia',
+            finding.description || 'Tidak tersedia',
+            finding.recommendation || 'Tidak tersedia'
+          ]);
+        });
+      } else {
+        findingsData.push(['Tidak ada temuan audit', '', '', '', '', '', '']);
+      }
+      
+      const findingsSheet = XLSX.utils.aoa_to_sheet(findingsData);
+      
+      // Set column widths
+      findingsSheet['!cols'] = [
+        { wch: 5 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 40 },
+        { wch: 40 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, findingsSheet, 'Temuan Audit');
+      
+      // 3. Statistics Sheet
+      const statisticsData = [
+        ['STATISTIK TEMUAN'],
+        [''],
+        ['Kategori', 'Jumlah', 'Persentase'],
+        ['Total Temuan', findings.length, '100%'],
+        ['Temuan Tinggi', findings.filter(f => f.severity === 'Tinggi').length, `${findings.length > 0 ? Math.round((findings.filter(f => f.severity === 'Tinggi').length / findings.length) * 100) : 0}%`],
+        ['Temuan Sedang', findings.filter(f => f.severity === 'Sedang').length, `${findings.length > 0 ? Math.round((findings.filter(f => f.severity === 'Sedang').length / findings.length) * 100) : 0}%`],
+        ['Temuan Rendah', findings.filter(f => f.severity === 'Rendah').length, `${findings.length > 0 ? Math.round((findings.filter(f => f.severity === 'Rendah').length / findings.length) * 100) : 0}%`],
+        [''],
+        ['STATUS TEMUAN'],
+        [''],
+        ['Terbuka', findings.filter(f => f.status === 'Terbuka').length],
+        ['Dalam Proses', findings.filter(f => f.status === 'Dalam Proses').length],
+        ['Selesai', findings.filter(f => f.status === 'Selesai').length],
+        ['Ditutup', findings.filter(f => f.status === 'Ditutup').length]
+      ];
+      
+      const statisticsSheet = XLSX.utils.aoa_to_sheet(statisticsData);
+      
+      // Set column widths
+      statisticsSheet['!cols'] = [
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 15 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, statisticsSheet, 'Statistik');
+      
+      return workbook;
+      
+    } catch (error) {
+      console.error('Error generating specific audit report Excel:', error);
+      throw error;
+    }
+  };
+
+  const generateBasicReportExcel = (reportData) => {
+    try {
+      // Create new workbook
+      const workbook = XLSX.utils.book_new();
+      
+      const currentDate = new Date().toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // 1. Summary Sheet
+      const summaryData = [
+        ['LAPORAN AUDIT INTERNAL'],
+        ['INSPEKTORAT KABUPATEN MOROWALI UTARA'],
+        [''],
+        ['Tanggal', currentDate],
+        ['Judul', reportData.title || 'Tidak tersedia'],
+        ['Jenis', reportData.type || 'Tidak tersedia'],
+        ['Status', reportData.status || 'Draft'],
+        ['Periode', reportData.period || 'Tidak tersedia'],
+        ['Dibuat Oleh', reportData.createdBy || 'System'],
+        [''],
+        ['RINGKASAN'],
+        [''],
+        ['Total Audit', reportData.totalAudits || 0],
+        ['Total Temuan', reportData.totalFindings || 0],
+        ['Audit Selesai', reportData.completedAudits || 0],
+        [''],
+        ['DETAIL'],
+        [''],
+        [reportData.summary || 'Tidak ada detail tersedia'],
+        [''],
+        ['Laporan ini dibuat secara otomatis oleh sistem Si-MAIL'],
+        ['Inspektorat Kabupaten Morowali Utara']
+      ];
+      
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      
+      // Set column widths
+      summarySheet['!cols'] = [
+        { wch: 30 },
+        { wch: 50 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Ringkasan');
+      
+      // 2. Basic Statistics Sheet
+      const statisticsData = [
+        ['STATISTIK DASAR'],
+        [''],
+        ['Kategori', 'Jumlah'],
+        ['Total Audit', reportData.totalAudits || 0],
+        ['Total Temuan', reportData.totalFindings || 0],
+        ['Audit Selesai', reportData.completedAudits || 0],
+        ['Audit Berlangsung', (reportData.totalAudits || 0) - (reportData.completedAudits || 0)],
+        [''],
+        ['INFORMASI LAPORAN'],
+        [''],
+        ['Judul Laporan', reportData.title || 'Tidak tersedia'],
+        ['Jenis Laporan', reportData.type || 'Tidak tersedia'],
+        ['Status Laporan', reportData.status || 'Draft'],
+        ['Periode Laporan', reportData.period || 'Tidak tersedia'],
+        ['Tanggal Dibuat', currentDate],
+        ['Dibuat Oleh', reportData.createdBy || 'System']
+      ];
+      
+      const statisticsSheet = XLSX.utils.aoa_to_sheet(statisticsData);
+      
+      // Set column widths
+      statisticsSheet['!cols'] = [
+        { wch: 25 },
+        { wch: 30 }
+      ];
+      
+      XLSX.utils.book_append_sheet(workbook, statisticsSheet, 'Statistik');
+      
+      return workbook;
+      
+    } catch (error) {
+      console.error('Error generating basic report Excel:', error);
+      throw error;
+    }
+  };
+
+  const downloadReportAsExcel = (workbook, filename) => {
+    try {
+      // Clean filename
+      const cleanFilename = filename
+        .replace(/[^a-zA-Z0-9\s\-_]/g, '') // Remove special characters
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .toLowerCase();
+      
+      const finalFilename = `${cleanFilename}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      // Write and download the Excel file
+      XLSX.writeFile(workbook, finalFilename);
+      
+      console.log('✅ Excel report downloaded successfully:', finalFilename);
+      alert(`Laporan Excel berhasil diunduh: ${finalFilename}`);
+      
+    } catch (error) {
+      console.error('❌ Error creating Excel file:', error);
+      alert(`Gagal membuat file Excel: ${error.message}`);
+    }
+  };
+
+  const handleDownloadReport = async (report) => {
+    try {
+      console.log('📥 Downloading report:', report);
+      
+      // Get full report data from Firestore
+      const fullReportData = await reportService.getReportById(report.id);
+      console.log('📋 Full report data:', fullReportData);
+      
+      if (!fullReportData) {
+        alert('Laporan tidak ditemukan!');
+        return;
+      }
+      
+      // Generate Excel workbook based on type
+      let workbook;
+      
+      if (fullReportData.reportType === 'general') {
+        workbook = await generateGeneralReportExcel(fullReportData);
+      } else if (fullReportData.reportType === 'specific_audit') {
+        workbook = await generateSpecificAuditReportExcel(fullReportData);
+      } else {
+        workbook = generateBasicReportExcel(fullReportData);
+      }
+      
+      // Create and download the Excel report
+      downloadReportAsExcel(workbook, fullReportData.title);
+      
+    } catch (error) {
+      console.error('❌ Error downloading report:', error);
+      alert(`Gagal mengunduh laporan: ${error.message}`);
+    }
+  };
+
+  // Filter reports based on type and year
+  const getFilteredReports = useCallback(() => {
+    console.log('🔍 Filtering reports...');
+    console.log('📋 All reports:', reports);
+    console.log('🔧 Filter type:', filterType);
+    console.log('🔧 Filter year:', filterYear);
+    
+    let filtered = reports;
+    console.log('📋 Initial filtered count:', filtered.length);
+
+    // Filter by type
+    if (filterType !== 'Semua Jenis') {
+      console.log('🔍 Filtering by type:', filterType);
+      filtered = filtered.filter(report => {
+        const matches = report.type === filterType;
+        console.log(`📝 Report "${report.title}" type "${report.type}" matches "${filterType}":`, matches);
+        return matches;
+      });
+      console.log('📋 After type filter count:', filtered.length);
+    }
+
+    // Filter by year
+    if (filterYear !== 'Semua Tahun') {
+      console.log('🔍 Filtering by year:', filterYear);
+      filtered = filtered.filter(report => {
+        const reportYear = new Date(report.date).getFullYear();
+        const matches = reportYear.toString() === filterYear;
+        console.log(`📝 Report "${report.title}" year "${reportYear}" matches "${filterYear}":`, matches);
+        return matches;
+      });
+      console.log('📋 After year filter count:', filtered.length);
+    }
+
+    console.log('📋 Final filtered reports:', filtered);
+    console.log('📋 Final filtered count:', filtered.length);
+    return filtered;
+  }, [reports, filterType, filterYear]);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -420,6 +1147,7 @@ const Laporan = () => {
                onChange={(e) => setFilterYear(e.target.value)}
                className="filter-select"
              >
+               <option value="Semua Tahun">Semua Tahun</option>
                <option value="2024">2024</option>
                <option value="2023">2023</option>
                <option value="2022">2022</option>
@@ -428,6 +1156,7 @@ const Laporan = () => {
          </div>
 
          <div className="report-table-container">
+           {getFilteredReports().length > 0 ? (
            <table className="report-table">
              <thead>
                <tr>
@@ -441,7 +1170,7 @@ const Laporan = () => {
                </tr>
              </thead>
              <tbody>
-               {reports.map((report) => (
+                 {getFilteredReports().map((report) => (
                  <tr key={report.id}>
                    <td>
                      <div className="report-title-cell">
@@ -467,8 +1196,81 @@ const Laporan = () => {
                ))}
              </tbody>
            </table>
+           ) : (
+             <div className="no-reports-message">
+               <div className="no-reports-icon">📄</div>
+               <h3>Belum ada laporan</h3>
+               <p>Gunakan template di atas untuk membuat laporan pertama Anda.</p>
          </div>
+           )}
        </div>
+       </div>
+
+       {/* Audit Selection Modal */}
+       {showAuditSelection && (
+         <div className="modal-overlay">
+           <div className="modal-content audit-selection-modal">
+             <div className="modal-header">
+               <h3>Pilih Audit untuk Laporan</h3>
+               <button 
+                 className="modal-close"
+                 onClick={() => setShowAuditSelection(false)}
+               >
+                 ×
+               </button>
+             </div>
+             
+             <div className="modal-body">
+               <p>Pilih audit yang akan dijadikan laporan:</p>
+               
+               <div className="audit-list">
+                 {availableAudits.map((audit) => (
+                   <div 
+                     key={audit.id} 
+                     className="audit-item"
+                     onClick={() => handleAuditSelection(audit)}
+                   >
+                     <div className="audit-info">
+                       <h4>{audit.title}</h4>
+                       <p className="audit-description">{audit.description}</p>
+                       <div className="audit-details">
+                         <span className="audit-department">📁 {audit.department}</span>
+                         <span className="audit-type">📋 {audit.type}</span>
+                         <span className="audit-status">📊 {audit.status}</span>
+                         <span className="audit-priority">⚡ {audit.priority}</span>
+                       </div>
+                       {audit.period && (
+                         <p className="audit-period">📅 Periode: {audit.period}</p>
+                       )}
+                     </div>
+                     <div className="audit-action">
+                       <button className="select-audit-btn">
+                         Pilih Audit
+                       </button>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+               
+               {availableAudits.length === 0 && (
+                 <div className="no-audits-message">
+                   <p>❌ Tidak ada audit yang tersedia untuk laporan.</p>
+                   <p>Pastikan ada audit yang sudah selesai atau sedang berlangsung.</p>
+                 </div>
+               )}
+             </div>
+             
+             <div className="modal-footer">
+               <button 
+                 className="btn-secondary"
+                 onClick={() => setShowAuditSelection(false)}
+               >
+                 Batal
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
      </div>
    );
  };

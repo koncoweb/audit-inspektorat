@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiShield, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useAppSettings } from '../contexts/AppSettingsContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { appSettings } = useAppSettings();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -60,9 +62,23 @@ const Login = () => {
             justifyContent: 'center',
             margin: '0 auto 15px',
             fontSize: '30px',
-            color: 'white'
+            color: 'white',
+            overflow: 'hidden'
           }}>
-            <FiShield />
+            {appSettings.logoUrl ? (
+              <img 
+                src={appSettings.logoUrl} 
+                alt="Logo" 
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: '12px'
+                }}
+              />
+            ) : (
+              <FiShield />
+            )}
           </div>
           <h1 style={{
             fontSize: '24px',
@@ -70,20 +86,20 @@ const Login = () => {
             color: '#1e293b',
             marginBottom: '5px'
           }}>
-            Si-MAIL
+            {appSettings.appName || 'Si-MAIL'}
           </h1>
           <p style={{
             fontSize: '14px',
             color: '#64748b',
             marginBottom: '10px'
           }}>
-            Sistem Manajemen Audit Internal
+            {appSettings.appSubtitle || 'Sistem Manajemen Audit Internal'}
           </p>
           <p style={{
             fontSize: '12px',
             color: '#94a3b8'
           }}>
-            Inspektorat Kabupaten Morowali Utara
+            {appSettings.organizationName || 'Inspektorat Kabupaten Morowali Utara'}
           </p>
         </div>
 
