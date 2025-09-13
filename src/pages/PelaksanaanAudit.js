@@ -624,12 +624,6 @@ const PelaksanaanAudit = () => {
           <h1>Pelaksanaan Audit</h1>
           <p>Dokumentasi dan monitoring pelaksanaan audit internal</p>
         </div>
-        <div className="page-actions">
-          <button className="btn-primary">
-            <FiPlus />
-            Audit Baru
-          </button>
-        </div>
       </div>
 
       {/* Summary Statistics */}
