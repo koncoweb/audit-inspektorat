@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiSave, FiCalendar, FiUser } from 'react-icons/fi';
+import { FiX } from 'react-icons/fi';
 import { db } from '../firebase/config.js';
 import { 
   collection, 

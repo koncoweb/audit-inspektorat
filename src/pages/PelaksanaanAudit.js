@@ -10,10 +10,7 @@ import {
   FiAlertCircle,
   FiPlay,
   FiPlus,
-  FiTrendingUp,
   FiCalendar,
-  FiDollarSign,
-  FiTarget,
   FiFilter,
   FiSearch,
   FiEye,
@@ -22,7 +19,6 @@ import {
   FiDownload,
   FiUpload,
   FiMoreVertical,
-  FiFolder,
   FiArrowUp,
   FiMic,
   FiAlertTriangle
@@ -128,9 +124,7 @@ const PelaksanaanAudit = () => {
           pending: 1
         });
         
-        if (!selectedAudit) {
-          setSelectedAudit(sampleAudits[0]);
-        }
+        setSelectedAudit(prev => prev || sampleAudits[0]);
       } else {
         setActiveAudits(audits);
         setStats({
@@ -141,10 +135,7 @@ const PelaksanaanAudit = () => {
         });
         
         // Set first audit as selected by default only if no audit is currently selected
-        if (!selectedAudit) {
-          console.log('Setting first audit as selected:', audits[0]);
-          setSelectedAudit(audits[0]);
-        }
+        setSelectedAudit(prev => prev || audits[0]);
       }
     } catch (error) {
       console.error('Error loading active audits:', error);
@@ -159,7 +150,7 @@ const PelaksanaanAudit = () => {
     } finally {
       setLoading(false);
     }
-  }, []); // Remove selectedAudit dependency to prevent infinite loop
+  }, []);
 
   useEffect(() => {
     loadActiveAudits();
@@ -212,13 +203,7 @@ const PelaksanaanAudit = () => {
     });
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount || 0);
-  };
+  // Removed unused formatCurrency to satisfy ESLint
 
   // Function to update audit details based on selected audit
   const updateAuditDetails = useCallback((audit) => {

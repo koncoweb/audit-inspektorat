@@ -97,21 +97,7 @@ const sampleAudits = [
     riskLevel: 'Medium',
     budget: 50000000,
     progress: 75,
-    // File references fields
-    workPapers: [],
-    evidence: [],
-    interviews: [],
-    notes: [],
-    // File counts
-    workPapersCount: 0,
-    evidenceCount: 0,
-    interviewsCount: 0,
-    notesCount: 0,
-    // File status flags
-    hasWorkPapers: false,
-    hasEvidence: false,
-    hasInterviews: false,
-    hasNotes: false,
+    // File references fields and counts initialized below
     team: [
       {
         id: '1',
@@ -137,7 +123,16 @@ const sampleAudits = [
     ],
     workPapers: [],
     evidence: [],
-    notes: []
+    interviews: [],
+    notes: [],
+    workPapersCount: 0,
+    evidenceCount: 0,
+    interviewsCount: 0,
+    notesCount: 0,
+    hasWorkPapers: false,
+    hasEvidence: false,
+    hasInterviews: false,
+    hasNotes: false
   },
   {
     title: 'Audit Kinerja Program Kesehatan Masyarakat',

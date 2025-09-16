@@ -23,12 +23,10 @@ import { db } from '../firebase/config';
 import { 
   collection, 
   getDocs, 
-  addDoc, 
   updateDoc, 
   deleteDoc,
   doc, 
   query, 
-  where, 
   orderBy 
 } from 'firebase/firestore';
 import FollowUpModalFixed from '../components/FollowUpModalFixed';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FiDownload, 
   FiTrash2, 
@@ -17,11 +17,7 @@ const FileList = ({ auditId, fileType, onFileDeleted }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadFiles();
-  }, [auditId, fileType]);
-
-  const loadFiles = async () => {
+  const loadFiles = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -61,7 +57,11 @@ const FileList = ({ auditId, fileType, onFileDeleted }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [auditId, fileType]);
+
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
   const handleDownload = async (file) => {
     try {

@@ -15,6 +15,9 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, updateProfile, signOut as signOutSecondary } from 'firebase/auth';
+import { firebaseConfig } from '../firebase/config';
 
 // Collection names
 const COLLECTIONS = {
@@ -32,6 +35,38 @@ const COLLECTIONS = {
 
 // User Management
 export const userService = {
+  // Create Auth user using a secondary Firebase app instance so current admin session remains active
+  async createAuthUserWithSecondaryApp(email, password, profile) {
+    // Reuse or init secondary app
+    let secondaryApp = null;
+    try {
+      secondaryApp = initializeApp(firebaseConfig, 'secondary');
+    } catch (e) {
+      // If already exists, get it
+      secondaryApp = window.firebaseApps?.secondary || null;
+    }
+    if (!secondaryApp) {
+      // Fallback to grabbing from namespace if available
+      try {
+        // eslint-disable-next-line no-undef
+        secondaryApp = window.firebase?.apps?.find?.(a => a.name === 'secondary');
+      } catch (_) {}
+    }
+    // Ensure we have an app
+    if (!secondaryApp) {
+      secondaryApp = initializeApp(firebaseConfig, 'secondary');
+    }
+
+    const secondaryAuth = getAuth(secondaryApp);
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    if (profile?.name) {
+      await updateProfile(cred.user, { displayName: profile.name });
+    }
+
+    // Sign out from secondary auth so it doesn't linger; primary admin session unaffected
+    try { await signOutSecondary(secondaryAuth); } catch (_) {}
+    return cred.user;
+  },
   async getAllUsers() {
     const querySnapshot = await getDocs(collection(db, COLLECTIONS.USERS));
     return querySnapshot.docs.map(doc => ({

@@ -2,10 +2,8 @@ import React, { useState, useRef } from 'react';
 import { 
   FiUpload, 
   FiX, 
-  FiFile, 
   FiCheck, 
   FiAlertCircle,
-  FiDownload,
   FiTrash2
 } from 'react-icons/fi';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';

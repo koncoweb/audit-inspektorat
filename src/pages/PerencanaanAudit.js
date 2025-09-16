@@ -14,9 +14,6 @@ import {
   FiSave,
   FiFileText,
   FiUsers,
-  FiDollarSign,
-  FiTarget,
-  FiMapPin,
   FiCalendar as FiCalendarIcon
 } from 'react-icons/fi';
 import { auditService } from '../services/firebaseService';

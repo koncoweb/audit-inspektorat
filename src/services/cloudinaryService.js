@@ -558,7 +558,8 @@ export const cloudinaryService = {
           collectionName = 'notes';
           break;
         default:
-          throw new Error('Invalid file type');
+          collectionName = 'notes';
+          break;
       }
       
       const fileDoc = await getDoc(doc(db, `audits/${auditId}/${collectionName}`, fileId));
@@ -599,7 +600,8 @@ export const cloudinaryService = {
           collectionName = 'notes';
           break;
         default:
-          throw new Error('Invalid file type');
+          collectionName = 'notes';
+          break;
       }
       
       const fileRef = doc(db, `audits/${auditId}/${collectionName}`, fileId);

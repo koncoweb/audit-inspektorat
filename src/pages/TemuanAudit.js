@@ -10,7 +10,6 @@ import {
   FiTrendingUp
 } from 'react-icons/fi';
 import { 
-  COLLECTIONS, 
   FINDING_STATUS, 
   FINDING_CATEGORY, 
   FINDING_SEVERITY 

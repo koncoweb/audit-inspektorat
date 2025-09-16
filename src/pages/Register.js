@@ -4,6 +4,7 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { userService } from '../services/firebaseService';
 import { FiEye, FiEyeOff, FiUser, FiMail, FiLock, FiShield } from 'react-icons/fi';
+import { useAppSettings } from '../contexts/AppSettingsContext';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { appSettings } = useAppSettings();
 
   const handleChange = (e) => {
     setFormData({
@@ -114,10 +116,19 @@ const Register = () => {
             width: '60px',
             height: '60px',
             background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-            borderRadius: '50%',
-            marginBottom: '16px'
+            borderRadius: '12px',
+            marginBottom: '16px',
+            overflow: 'hidden'
           }}>
-            <FiShield style={{ color: 'white', fontSize: '24px' }} />
+            {appSettings.logoUrl ? (
+              <img 
+                src={appSettings.logoUrl} 
+                alt="Logo" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <FiShield style={{ color: 'white', fontSize: '24px' }} />
+            )}
           </div>
           <h1 style={{
             margin: '0 0 8px 0',
@@ -125,14 +136,14 @@ const Register = () => {
             fontWeight: '600',
             color: '#1a202c'
           }}>
-            Registrasi Si-MAIL
+            Registrasi {appSettings.appName || 'Aplikasi'}
           </h1>
           <p style={{
             margin: '0',
             color: '#718096',
             fontSize: '14px'
           }}>
-            Daftar akun baru untuk mengakses sistem
+            {appSettings.appSubtitle || 'Sistem'}
           </p>
         </div>
 
