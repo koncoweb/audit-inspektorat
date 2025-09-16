@@ -496,6 +496,9 @@ const Laporan = () => {
         ['Tanggal', currentDate],
         ['Periode', reportData.period || 'Tidak tersedia'],
         ['Status', reportData.status || 'Draft'],
+        ['Dibuat Oleh', reportData.createdBy || 'System'],
+        ['Tipe Laporan', reportData.reportType || 'general'],
+        ['Dibuat Pada', new Date().toISOString()],
         [''],
         ['RINGKASAN EKSEKUTIF'],
         [''],
@@ -528,7 +531,7 @@ const Laporan = () => {
       const auditDetailsData = [
         ['DETAIL AUDIT'],
         [''],
-        ['No', 'Audit ID', 'Status', 'Temuan', 'Progress']
+        ['No', 'Audit ID', 'Judul', 'Unit', 'Jenis', 'Prioritas', 'Tanggal Mulai', 'Tanggal Selesai', 'Auditor', 'Status', 'Temuan', 'Progress']
       ];
       
       if (reportData.auditIds && reportData.auditIds.length > 0) {
@@ -542,6 +545,13 @@ const Laporan = () => {
             auditDetailsData.push([
               i + 1,
               auditId,
+              auditDetails?.title || 'Tidak tersedia',
+              auditDetails?.department || 'Tidak tersedia',
+              auditDetails?.type || 'Tidak tersedia',
+              auditDetails?.priority || 'Tidak tersedia',
+              auditDetails?.startDate || 'Tidak tersedia',
+              auditDetails?.endDate || 'Tidak tersedia',
+              auditDetails?.auditor || 'Tidak tersedia',
               auditDetails?.status || 'Tidak tersedia',
               auditDetails?.findingsCount || 0,
               `${auditDetails?.progress || 0}%`
@@ -553,12 +563,19 @@ const Laporan = () => {
               auditId,
               'Error loading',
               'N/A',
+              'N/A',
+              'N/A',
+              'N/A',
+              'N/A',
+              'N/A',
+              'N/A',
+              'N/A',
               'N/A'
             ]);
           }
         }
       } else {
-        auditDetailsData.push(['Tidak ada data audit tersedia', '', '', '', '']);
+        auditDetailsData.push(['Tidak ada data audit tersedia', '', '', '', '', '', '', '', '', '', '', '']);
       }
       
       const auditDetailsSheet = XLSX.utils.aoa_to_sheet(auditDetailsData);
@@ -567,7 +584,14 @@ const Laporan = () => {
       auditDetailsSheet['!cols'] = [
         { wch: 5 },
         { wch: 20 },
+        { wch: 30 },
+        { wch: 20 },
         { wch: 15 },
+        { wch: 12 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 20 },
+        { wch: 14 },
         { wch: 10 },
         { wch: 10 }
       ];
@@ -575,6 +599,23 @@ const Laporan = () => {
       XLSX.utils.book_append_sheet(workbook, auditDetailsSheet, 'Detail Audit');
       
       // 3. Statistics Sheet
+      // Compute accurate status distribution
+      let statusDraft = 0, statusApproved = 0, statusOngoing = 0, statusCompleted = 0;
+      if (reportData.auditIds && reportData.auditIds.length > 0) {
+        try {
+          const { auditService } = await import('../services/firebaseService');
+          for (const auditId of reportData.auditIds) {
+            try {
+              const a = await auditService.getAuditById(auditId);
+              if (a?.status === 'Draft') statusDraft++; 
+              else if (a?.status === 'Disetujui') statusApproved++;
+              else if (a?.status === 'Berlangsung') statusOngoing++;
+              else if (a?.status === 'Selesai') statusCompleted++;
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+
       const statisticsData = [
         ['STATISTIK AUDIT'],
         [''],
@@ -582,6 +623,13 @@ const Laporan = () => {
         ['Total Audit', reportData.totalAudits || 0, '100%'],
         ['Audit Selesai', reportData.completedAudits || 0, `${reportData.totalAudits > 0 ? Math.round((reportData.completedAudits / reportData.totalAudits) * 100) : 0}%`],
         ['Audit Berlangsung', (reportData.totalAudits || 0) - (reportData.completedAudits || 0), `${reportData.totalAudits > 0 ? Math.round(((reportData.totalAudits - reportData.completedAudits) / reportData.totalAudits) * 100) : 0}%`],
+        [''],
+        ['Distribusi Status (Akurat)'],
+        ['Status', 'Jumlah'],
+        ['Draft', statusDraft],
+        ['Disetujui', statusApproved],
+        ['Berlangsung', statusOngoing],
+        ['Selesai', statusCompleted],
         [''],
         ['TEMUAN AUDIT'],
         [''],
