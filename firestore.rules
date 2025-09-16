@@ -104,11 +104,12 @@ service cloud.firestore {
       allow read: if true; // Temporary for testing
     }
 
-    // App Settings collection - Only admins can read/write
+    // App Settings collection
+    // Public read so unauthenticated pages (e.g., login) can load branding
+    // Write remains restricted to admins only
     match /app_settings/{settingId} {
-      allow read, write: if isAdmin();
-      // Allow read for authenticated users to display app info
-      allow read: if isAuthenticated();
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

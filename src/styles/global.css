@@ -1181,12 +1181,12 @@ body {
   font-size: 14px;
 }
 
+/* Remove automatic required marker on labels */
 .form-group label::after {
-  content: " *";
-  color: #ef4444;
-  font-weight: bold;
+  content: "";
 }
 
+/* Keep empty for non-required fields as well (no marker at all) */
 .form-group label:has(input:not([required]))::after,
 .form-group label:has(select:not([required]))::after,
 .form-group label:has(textarea:not([required]))::after {

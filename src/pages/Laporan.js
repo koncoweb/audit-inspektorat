@@ -29,6 +29,7 @@ const Laporan = () => {
   const [filterYear, setFilterYear] = useState('2024');
   const [showAuditSelection, setShowAuditSelection] = useState(false);
   const [availableAudits, setAvailableAudits] = useState([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
 
   useEffect(() => {
@@ -959,7 +960,7 @@ const Laporan = () => {
         </div>
         <button 
           className="generate-report-btn"
-          onClick={() => handleGenerateReport({ title: 'Laporan Umum' })}
+          onClick={() => setShowTemplateModal(true)}
         >
           <span>📄</span>
           Generate Laporan
@@ -1271,8 +1272,51 @@ const Laporan = () => {
            </div>
          </div>
        )}
-     </div>
-   );
- };
+      {showTemplateModal && (
+        <div className="modal-overlay">
+          <div className="modal-content audit-selection-modal">
+            <div className="modal-header">
+              <h3>Pilih Jenis Laporan</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowTemplateModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="templates-grid">
+                {reportTemplates.map((template) => (
+                  <div
+                    key={template.id}
+                    className="template-card"
+                    onClick={async () => {
+                      setShowTemplateModal(false);
+                      await handleGenerateReport(template);
+                    }}
+                  >
+                    <div className="template-icon">{template.icon}</div>
+                    <div className="template-content">
+                      <h4>{template.title}</h4>
+                      <p>{template.subtitle}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn-secondary"
+                onClick={() => setShowTemplateModal(false)}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default Laporan;
