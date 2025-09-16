@@ -362,7 +362,7 @@ const PerencanaanAudit = () => {
         <form onSubmit={handleSubmit} className="audit-plan-form">
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="title">Judul Rencana Audit *</label>
+              <label htmlFor="title">Judul Rencana Audit</label>
               <input
                 type="text"
                 id="title"
@@ -376,7 +376,7 @@ const PerencanaanAudit = () => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="department">Unit Auditee *</label>
+              <label htmlFor="department">Unit Auditee</label>
               <input
                 type="text"
                 id="department"
@@ -392,7 +392,7 @@ const PerencanaanAudit = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="type">Jenis Audit *</label>
+              <label htmlFor="type">Jenis Audit</label>
               <select
                 id="type"
                 name="type"
@@ -411,7 +411,7 @@ const PerencanaanAudit = () => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="priority">Prioritas *</label>
+              <label htmlFor="priority">Prioritas</label>
               <select
                 id="priority"
                 name="priority"
@@ -429,7 +429,7 @@ const PerencanaanAudit = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="status">Status *</label>
+              <label htmlFor="status">Status</label>
               <select
                 id="status"
                 name="status"
@@ -463,7 +463,7 @@ const PerencanaanAudit = () => {
             <div className="form-group">
               <label htmlFor="startDate">
                 <FiCalendarIcon />
-                Tanggal Mulai *
+                Tanggal Mulai
               </label>
               <input
                 type="date"
@@ -480,7 +480,7 @@ const PerencanaanAudit = () => {
             <div className="form-group">
               <label htmlFor="endDate">
                 <FiCalendarIcon />
-                Tanggal Selesai *
+                Tanggal Selesai
               </label>
               <input
                 type="date"
@@ -497,7 +497,7 @@ const PerencanaanAudit = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="budget">Anggaran (Rp) *</label>
+              <label htmlFor="budget">Anggaran (Rp)</label>
               <input
                 type="number"
                 id="budget"
@@ -512,7 +512,7 @@ const PerencanaanAudit = () => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="riskLevel">Tingkat Risiko *</label>
+              <label htmlFor="riskLevel">Tingkat Risiko</label>
               <select
                 id="riskLevel"
                 name="riskLevel"
@@ -632,7 +632,7 @@ const PerencanaanAudit = () => {
       {/* Summary Cards */}
       <div className="summary-cards">
         <div className="summary-card">
-          <div className="card-icon">
+          <div className="card-icon planning">
             <FiCalendar />
           </div>
           <div className="card-content">

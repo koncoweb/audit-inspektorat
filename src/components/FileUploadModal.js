@@ -188,7 +188,7 @@ const FileUploadModal = ({
           <div className="form-section">
             <div className="form-row">
               <div className="form-group">
-                <label>Judul *</label>
+                <label>Judul</label>
                 <input
                   type="text"
                   value={formData.title}

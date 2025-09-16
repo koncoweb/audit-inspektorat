@@ -377,7 +377,7 @@ const FollowUpModalFixed = ({ isOpen, onClose, followUp = null, onSuccess }) => 
           )}
 
           <div style={{ marginBottom: '15px' }}>
-            <label>Judul Tindak Lanjut *</label>
+            <label>Judul Tindak Lanjut</label>
             <input
               type="text"
               name="title"
@@ -390,7 +390,7 @@ const FollowUpModalFixed = ({ isOpen, onClose, followUp = null, onSuccess }) => 
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <label>Audit *</label>
+            <label>Audit</label>
             <select
               name="auditTitle"
               value={formData.auditTitle}
@@ -412,7 +412,7 @@ const FollowUpModalFixed = ({ isOpen, onClose, followUp = null, onSuccess }) => 
 
                      {formData.auditTitle && (
              <div style={{ marginBottom: '15px' }}>
-               <label>Temuan Audit *</label>
+               <label>Temuan Audit</label>
                <select
                  name="findingId"
                  value={formData.findingId}
@@ -462,7 +462,7 @@ const FollowUpModalFixed = ({ isOpen, onClose, followUp = null, onSuccess }) => 
            )}
 
           <div style={{ marginBottom: '15px' }}>
-            <label>Rekomendasi *</label>
+            <label>Rekomendasi</label>
             <textarea
               name="recommendation"
               value={formData.recommendation}
@@ -475,7 +475,7 @@ const FollowUpModalFixed = ({ isOpen, onClose, followUp = null, onSuccess }) => 
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <label>Penanggung Jawab *</label>
+            <label>Penanggung Jawab</label>
             <input
               type="text"
               name="assignedTo"
@@ -488,7 +488,7 @@ const FollowUpModalFixed = ({ isOpen, onClose, followUp = null, onSuccess }) => 
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <label>Deadline *</label>
+            <label>Deadline</label>
             <input
               type="date"
               name="deadline"

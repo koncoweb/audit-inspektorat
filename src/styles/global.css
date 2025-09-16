@@ -244,6 +244,14 @@ body {
 .card-icon.orange { background: linear-gradient(45deg, #f59e0b, #d97706); }
 .card-icon.red { background: linear-gradient(45deg, #ef4444, #dc2626); }
 
+/* Perencanaan-specific colorful icons (match dashboard vibe) */
+.card-icon.planning { background: linear-gradient(45deg, #8b5cf6, #7c3aed); }
+.card-icon.draft { background: linear-gradient(45deg, #6b7280, #4b5563); }
+.card-icon.approved { background: linear-gradient(45deg, #10b981, #059669); }
+.card-icon.ongoing { background: linear-gradient(45deg, #3b82f6, #1d4ed8); }
+.card-icon.completed { background: linear-gradient(45deg, #22c55e, #16a34a); }
+.card-icon.high-priority { background: linear-gradient(45deg, #f97316, #ea580c); }
+
 .card-value {
   font-size: 32px;
   font-weight: 700;
