@@ -26,7 +26,7 @@ const Laporan = () => {
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
   const [filterType, setFilterType] = useState('Semua Jenis');
-  const [filterYear, setFilterYear] = useState('2024');
+  const [filterYear, setFilterYear] = useState('Semua Tahun');
   const [showAuditSelection, setShowAuditSelection] = useState(false);
   const [availableAudits, setAvailableAudits] = useState([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
